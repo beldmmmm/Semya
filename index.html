@@ -1,0 +1,873 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, interactive-widget=resizes-content">
+<meta name="theme-color" content="#ffffff" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#1a2235" media="(prefers-color-scheme: dark)">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="Семья">
+<meta name="referrer" content="no-referrer">
+<link rel="manifest" href="manifest.json">
+<link rel="apple-touch-icon" href="icon-192.png">
+<link rel="icon" type="image/png" href="icon-192.png">
+<title>Семья</title>
+<style>
+:root{
+  --bg:#eef1f6; --surface:#ffffff; --surface-2:#e3e8f0; --ink:#1b2333; --muted:#5f6a82; --line:#d5dbe5;
+  --brand:#23345a; --lamp:#f0ae32; --lamp-ink:#2a1d05;
+  --mine:#23345a; --mine-ink:#f5f7fb; --theirs:#ffffff; --theirs-ink:#1b2333;
+  --danger:#b42318; --focus:#3d6bd6;
+  --round: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
+  --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark){
+  :root{
+    --bg:#111726; --surface:#1a2235; --surface-2:#243049; --ink:#e9edf5; --muted:#97a2ba; --line:#2d3853;
+    --brand:#f0ae32; --mine:#f0ae32; --mine-ink:#24190a; --theirs:#1f2940; --theirs-ink:#e9edf5;
+    --danger:#ff8a80; --focus:#8fb0ff;
+    color-scheme: dark;
+  }
+}
+*{box-sizing:border-box}
+html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+#app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100dvh);display:flex;flex-direction:column}
+button{font:inherit;color:inherit}
+:focus-visible{outline:2px solid var(--focus);outline-offset:2px}
+
+/* ── формы ── */
+.screen{flex:1;overflow-y:auto;-webkit-overflow-scrolling:touch;padding:calc(env(safe-area-inset-top) + 32px) 20px calc(env(safe-area-inset-bottom) + 32px)}
+.wrap{max-width:420px;margin:0 auto}
+.brand{display:flex;align-items:center;gap:14px;margin-bottom:26px}
+.brand-mark{width:52px;height:52px;flex:none;display:block}
+.brand-name{font-family:var(--round);font-size:30px;font-weight:700;letter-spacing:-.01em;color:var(--brand);line-height:1.1}
+.brand-sub{color:var(--muted);font-size:14px;margin-top:3px}
+h2{font-family:var(--round);font-size:21px;line-height:1.25;margin:0 0 10px;font-weight:700}
+p{line-height:1.45;margin:0 0 12px}
+.seg{display:grid;grid-template-columns:1fr 1fr;background:var(--surface-2);border-radius:12px;padding:3px;margin:0 0 20px}
+.seg button{border:0;background:transparent;padding:10px 6px;border-radius:9px;font-weight:600;color:var(--muted);cursor:pointer}
+.seg button.on{background:var(--surface);color:var(--ink);box-shadow:0 1px 2px rgb(0 0 0 / .14)}
+.field{display:block;margin-bottom:16px}
+.field-label{display:block;font-size:14px;font-weight:600;margin-bottom:6px}
+.field-hint{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
+.input{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);-webkit-appearance:none;appearance:none}
+.input:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 25%,transparent)}
+.row{display:flex;gap:8px}
+.row .input{flex:1;min-width:0}
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:12px 16px;border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;min-height:46px}
+.btn.primary{background:var(--lamp);border-color:transparent;color:var(--lamp-ink);width:100%}
+.btn.ghost{background:transparent;border-color:transparent;color:var(--muted)}
+.btn.small{min-height:0;padding:8px 12px;font-size:14px}
+.btn:disabled{opacity:.6;cursor:default}
+.form-error{color:var(--danger);font-size:14px;margin:0 0 12px}
+.form-error:empty{display:none}
+.note{font-size:13.5px;color:var(--muted)}
+.steps{padding-left:22px;margin:0 0 20px;line-height:1.5}
+.steps li{margin-bottom:8px}
+.alt{margin-top:18px;display:flex;flex-direction:column;align-items:center;gap:4px}
+.spinner{width:28px;height:28px;border:3px solid var(--line);border-top-color:var(--lamp);border-radius:50%;animation:spin .8s linear infinite;margin:48px auto}
+
+/* ── чат ── */
+.chat{flex:1;display:flex;flex-direction:column;min-height:0}
+.top{display:flex;align-items:center;gap:12px;padding:calc(env(safe-area-inset-top) + 10px) 10px 10px 14px;background:var(--surface);border-bottom:1px solid var(--line)}
+.top .brand-mark{width:36px;height:36px}
+.top-text{flex:1;min-width:0}
+.top-title{font-family:var(--round);font-weight:700;font-size:18px;line-height:1.2}
+.top-status{font-size:12.5px;color:var(--muted)}
+.icon-btn{width:40px;height:40px;flex:none;border-radius:50%;border:0;background:transparent;display:grid;place-items:center;cursor:pointer;color:var(--ink)}
+.icon-btn:hover{background:var(--surface-2)}
+.hint{display:flex;gap:10px;align-items:center;padding:8px 8px 8px 14px;background:var(--surface-2);font-size:13.5px;line-height:1.35}
+.hint p{margin:0;flex:1}
+.hint .btn.primary{width:auto}
+.hint-actions{display:flex;align-items:center;gap:4px}
+.scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;overscroll-behavior:contain;padding:8px 12px 10px}
+.older{display:block;margin:4px auto 0}
+.msgs{display:flex;flex-direction:column;max-width:760px;margin:0 auto}
+.day{align-self:center;font-size:12.5px;color:var(--muted);background:var(--surface-2);padding:4px 11px;border-radius:999px;margin:16px 0 6px}
+.msg{display:flex;flex-direction:column;max-width:82%;margin-top:10px}
+.msg.grouped{margin-top:3px}
+.msg.mine{align-self:flex-end;align-items:flex-end}
+.msg.theirs{align-self:flex-start;align-items:flex-start}
+.who{font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 3px 12px}
+.bubble{padding:8px 12px 7px;border-radius:18px;line-height:1.38;font-size:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.mine .bubble{background:var(--mine);color:var(--mine-ink);border-bottom-right-radius:6px}
+.theirs .bubble{background:var(--theirs);color:var(--theirs-ink);border-bottom-left-radius:6px;box-shadow:0 0 0 1px var(--line)}
+.mine.grouped .bubble{border-top-right-radius:6px}
+.theirs.grouped .bubble{border-top-left-radius:6px}
+.bubble a{color:inherit}
+.bubble.locked{font-style:italic;opacity:.75}
+.time{float:right;font-size:11px;opacity:.62;margin:7px 0 -3px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.empty{text-align:center;color:var(--muted);padding:56px 24px;max-width:340px;margin:0 auto}
+.empty p:first-child{font-family:var(--round);font-size:19px;font-weight:700;color:var(--ink)}
+.compose{display:flex;align-items:flex-end;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:var(--surface);border-top:1px solid var(--line)}
+.kb .compose{padding-bottom:8px}
+.compose-input{flex:1;min-width:0;resize:none;font:inherit;font-size:16px;line-height:1.35;padding:10px 14px;border-radius:21px;border:1px solid var(--line);background:var(--bg);color:var(--ink);max-height:140px;display:block}
+.compose-input:focus{outline:none;border-color:var(--focus)}
+.send{width:44px;height:44px;flex:none;border-radius:50%;border:0;background:var(--lamp);color:var(--lamp-ink);display:grid;place-items:center;cursor:pointer}
+.send:disabled{opacity:.5}
+
+/* ── всплывающие окна ── */
+.overlay{position:fixed;inset:0;background:rgb(8 12 22 / .5);display:flex;align-items:flex-end;justify-content:center;z-index:50;animation:fade .15s ease-out}
+.sheet{background:var(--surface);color:var(--ink);width:100%;max-width:520px;max-height:88dvh;overflow-y:auto;border-radius:20px 20px 0 0;padding:16px 18px calc(env(safe-area-inset-bottom) + 20px);animation:up .2s ease-out}
+@media (min-width:600px){.overlay{align-items:center}.sheet{border-radius:20px}}
+.sheet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.sheet-head h2{margin:0}
+.menu{display:flex;flex-direction:column}
+.menu button{display:flex;flex-direction:column;align-items:flex-start;gap:2px;text-align:left;border:0;border-bottom:1px solid var(--line);background:transparent;padding:13px 2px;cursor:pointer}
+.menu button:last-child{border-bottom:0}
+.menu b{font-weight:600;font-size:16px}
+.menu span{font-size:13.5px;color:var(--muted)}
+.menu .danger b{color:var(--danger)}
+.linkbox{width:100%;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:none;word-break:break-all;margin:4px 0 10px;display:block}
+.btn-row{display:flex;gap:8px;margin-bottom:14px}
+.btn-row .btn{flex:1;width:auto}
+.code{font-family:var(--round);font-size:30px;font-weight:700;letter-spacing:.06em;text-align:center;padding:18px 10px;background:var(--surface-2);border-radius:14px;margin:6px 0 14px;font-variant-numeric:tabular-nums}
+.people{list-style:none;padding:0;margin:0}
+.people li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
+.people li:last-child{border-bottom:0}
+.avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
+.tag{font-size:12.5px;color:var(--muted)}
+.toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translate(-50%,8px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s,transform .2s;z-index:100;max-width:90vw;text-align:center;pointer-events:none}
+.toast.on{opacity:1;transform:translate(-50%,0)}
+
+@keyframes spin{to{transform:rotate(360deg)}}
+@keyframes fade{from{opacity:0}}
+@keyframes up{from{transform:translateY(24px)}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.111.0"></script>
+<script>
+'use strict';
+
+// ═══════════════ НАСТРОЙКИ — впишите свои данные из Supabase ═══════════════
+const SUPABASE_URL = 'https://ygxkeqxuzkslrcukjyuu.supabase.co';   // Project URL, например: 'https://abcdefghijk.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_WJqWcvbm8Ldr6quJwFOKkA_SwgGJ6-v';   // Publishable key, начинается с 'sb_publishable_'
+const APP_NAME     = 'Семья';
+// ═════════════════════════════════════════════════════════════════════════════
+
+const LS_KEY  = 'fc.familyKey';
+const LS_HINT = 'fc.hintHidden';
+const PAGE = 200;
+const COLS = 'id,sender,iv,body,created_at';
+
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
+const coarse = matchMedia('(pointer: coarse)').matches;
+
+const app = document.getElementById('app');
+let sb = null;            // клиент Supabase
+let me = null;            // текущий пользователь
+let myMember = null;      // моя запись в семье
+let familyKey = null;     // ключ шифрования семьи
+let familyKeyB64 = null;
+let incoming = null;      // данные из ссылки: {invite, key, raw}
+let chat = null;          // состояние экрана чата
+let installEvt = null;
+
+// ───────────── мелкие помощники ─────────────
+function h(tag, attrs, ...children) {
+  const el = document.createElement(tag);
+  for (const [k, v] of Object.entries(attrs || {})) {
+    if (v == null || v === false) continue;
+    if (k === 'class') el.className = v;
+    else if (k.startsWith('on')) el.addEventListener(k.slice(2), v);
+    else el.setAttribute(k, v === true ? '' : v);
+  }
+  for (const c of children.flat()) {
+    if (c == null || c === false) continue;
+    el.append(c.nodeType ? c : document.createTextNode(String(c)));
+  }
+  return el;
+}
+function svg(inner, size) {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 24 24');
+  s.setAttribute('width', size || 22); s.setAttribute('height', size || 22);
+  s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
+  s.setAttribute('stroke-width', '2.2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = inner;
+  return s;
+}
+const iconSend  = () => svg('<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>');
+const iconMore  = () => svg('<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>');
+const iconClose = () => svg('<path d="M6 6l12 12M18 6 6 18"/>', 20);
+function brandMark() {
+  const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  s.setAttribute('viewBox', '0 0 64 64'); s.setAttribute('class', 'brand-mark'); s.setAttribute('aria-hidden', 'true');
+  s.innerHTML = '<rect width="64" height="64" rx="15" fill="#23345a"/><path d="M32 13 11 31h6v20h30V31h6z" fill="#3b5287"/><rect x="25.5" y="33" width="13" height="12" rx="1.5" fill="#f0ae32"/><path d="M32 33v12M25.5 39h13" stroke="#3b5287" stroke-width="1.8"/>';
+  return s;
+}
+function toast(text) {
+  const el = h('div', { class: 'toast', role: 'status' }, text);
+  document.body.append(el);
+  requestAnimationFrame(() => el.classList.add('on'));
+  setTimeout(() => { el.classList.remove('on'); setTimeout(() => el.remove(), 300); }, 2800);
+}
+async function copyText(text) {
+  try { await navigator.clipboard.writeText(text); toast('Скопировано'); return; } catch (e) { /* запасной способ ниже */ }
+  const ta = h('textarea', { readonly: true, style: 'position:fixed;top:0;left:0;opacity:0' });
+  ta.value = text; document.body.append(ta); ta.select();
+  try { document.execCommand('copy'); toast('Скопировано'); } catch (e) { toast('Не получилось. Выделите ссылку и скопируйте вручную'); }
+  ta.remove();
+}
+function errText(e) {
+  const m = (e && (e.message || e.error_description || e.msg)) || String(e);
+  const known = [
+    [/Invalid login credentials/i, 'Неверный email или пароль'],
+    [/already registered|already been registered|already exists/i, 'Этот email уже зарегистрирован. Используйте «Вход»'],
+    [/Password should|weak password/i, 'Пароль слишком простой или короткий'],
+    [/Unable to validate email|invalid format|email address .* invalid/i, 'Проверьте email'],
+    [/rate limit|too many/i, 'Слишком много попыток. Подождите пару минут'],
+    [/Failed to fetch|NetworkError|Load failed|network/i, 'Нет связи с сервером. Проверьте интернет'],
+    [/Email not confirmed/i, 'Email не подтверждён. Выключите «Confirm email» в Supabase (шаг 3 инструкции)'],
+    [/Signups not allowed|signup is disabled/i, 'В Supabase выключена регистрация. Включите «Allow new users to sign up»'],
+  ];
+  for (const [re, t] of known) if (re.test(m)) return t;
+  return m;
+}
+async function busy(btn, err, fn) {
+  if (btn.disabled) return;
+  btn.disabled = true;
+  if (err) err.textContent = '';
+  const label = btn.textContent;
+  btn.textContent = 'Подождите…';
+  try { await fn(); }
+  catch (e) { if (err && err.isConnected) err.textContent = errText(e); else toast(errText(e)); }
+  finally { if (btn.isConnected) { btn.disabled = false; btn.textContent = label; } }
+}
+const baseUrl = () => location.origin + location.pathname;
+const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
+const fmtTime = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+function dayLabel(d) {
+  const now = new Date(), y = new Date(); y.setDate(now.getDate() - 1);
+  if (sameDay(d, now)) return 'Сегодня';
+  if (sameDay(d, y)) return 'Вчера';
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'long', year: d.getFullYear() === now.getFullYear() ? undefined : 'numeric' });
+}
+function initials(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
+function avatarColor(name) {
+  let x = 0; for (const ch of name || '') x = (x * 31 + ch.codePointAt(0)) >>> 0;
+  return 'hsl(' + (x % 360) + ' 42% 44%)';
+}
+
+// ───────────── шифрование ─────────────
+const enc = new TextEncoder(), dec = new TextDecoder();
+function b64e(bytes) {
+  const b = new Uint8Array(bytes); let s = '';
+  for (let i = 0; i < b.length; i += 0x8000) s += String.fromCharCode.apply(null, b.subarray(i, i + 0x8000));
+  return btoa(s).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+}
+function b64d(str) {
+  let s = str.replace(/-/g, '+').replace(/_/g, '/');
+  while (s.length % 4) s += '=';
+  const bin = atob(s), out = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
+  return out;
+}
+async function importKey(b64) {
+  const raw = b64d(b64);
+  if (raw.length !== 32) throw new Error('Неверный ключ в ссылке');
+  return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
+}
+async function setKey(b64) {
+  familyKey = await importKey(b64);
+  familyKeyB64 = b64;
+  localStorage.setItem(LS_KEY, b64);
+}
+async function loadKey() {
+  const k = localStorage.getItem(LS_KEY);
+  if (!k) return;
+  try { familyKey = await importKey(k); familyKeyB64 = k; } catch (e) { localStorage.removeItem(LS_KEY); }
+}
+async function newKey() { await setKey(b64e(crypto.getRandomValues(new Uint8Array(32)))); }
+
+// Текст шифруется AES-GCM. Отправитель вшит в проверку: подменить автора на сервере нельзя.
+async function encryptMsg(text, senderId) {
+  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const data = enc.encode(JSON.stringify({ v: 1, t: text }));
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(senderId) }, familyKey, data);
+  return { iv: b64e(iv), body: b64e(ct) };
+}
+async function decryptMsg(m, key) {
+  try {
+    const pt = await crypto.subtle.decrypt(
+      { name: 'AES-GCM', iv: b64d(m.iv), additionalData: enc.encode(m.sender) }, key || familyKey, b64d(m.body));
+    const obj = JSON.parse(dec.decode(pt));
+    return { ok: true, text: String(obj.t == null ? '' : obj.t) };
+  } catch (e) { return { ok: false, text: '' }; }
+}
+async function keyFingerprint() {
+  const d = new Uint8Array(await crypto.subtle.digest('SHA-256', b64d(familyKeyB64)));
+  const parts = [];
+  for (let i = 0; i < 8; i += 2) parts.push(String(((d[i] << 8) | d[i + 1]) % 10000).padStart(4, '0'));
+  return parts.join(' ');
+}
+// Ссылки: #i=<приглашение>&k=<ключ>  или  #k=<ключ>
+function parseLink(str) {
+  str = String(str || '');
+  const i = str.match(/[#&?]i=([0-9a-f]{32})(?![0-9a-zA-Z])/);
+  const k = str.match(/[#&?]k=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/);
+  return { invite: i ? i[1] : null, key: k ? k[1] : null };
+}
+
+// ───────────── экран и клавиатура ─────────────
+function fitViewport() {
+  const vv = window.visualViewport;
+  const st = document.documentElement.style;
+  st.setProperty('--app-h', (vv ? vv.height : window.innerHeight) + 'px');
+  st.setProperty('--app-top', (vv ? vv.offsetTop : 0) + 'px');
+  document.body.classList.toggle('kb', !!vv && vv.height < window.innerHeight * 0.75);
+  if (chat && chat.stick) scrollBottom();
+}
+
+// ───────────── экраны ─────────────
+function mount(node) { stopChat(); app.replaceChildren(node); }
+function page(...children) { return h('div', { class: 'screen' }, h('div', { class: 'wrap' }, ...children)); }
+function brand() {
+  return h('div', { class: 'brand' }, brandMark(),
+    h('div', {}, h('div', { class: 'brand-name' }, APP_NAME), h('div', { class: 'brand-sub' }, 'Семейный чат со сквозным шифрованием')));
+}
+function input(attrs) { return h('input', Object.assign({ class: 'input' }, attrs)); }
+function field(label, control, hint) {
+  return h('label', { class: 'field' }, h('span', { class: 'field-label' }, label), control,
+    hint ? h('span', { class: 'field-hint' }, hint) : null);
+}
+function linkField(label, initial) {
+  const inp = input({ type: 'text', 'aria-label': label, placeholder: 'Вставьте ссылку целиком', autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false' });
+  if (initial) inp.value = initial;
+  const paste = h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    try { const t = await navigator.clipboard.readText(); if (t) inp.value = t.trim(); }
+    catch (e) { inp.focus(); toast('Нажмите на поле и выберите «Вставить»'); }
+  } }, 'Вставить');
+  return { el: h('div', { class: 'field' }, h('span', { class: 'field-label' }, label), h('div', { class: 'row' }, inp, paste)), input: inp };
+}
+function needName(inp) {
+  const v = inp.value.trim();
+  if (!v) throw new Error('Впишите, как вас называть');
+  return v.slice(0, 40);
+}
+
+function showLoading() { mount(page(brand(), h('div', { class: 'spinner', role: 'status', 'aria-label': 'Загрузка' }))); }
+
+function showFatal(msg, opts) {
+  opts = opts || {};
+  mount(page(brand(), h('h2', {}, 'Что-то пошло не так'), h('p', {}, msg),
+    h('button', { class: 'btn primary', type: 'button', onclick: opts.reload ? () => location.reload() : () => route() }, 'Повторить'),
+    opts.logout ? h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти из аккаунта')) : null));
+}
+
+function showConfig() {
+  mount(page(brand(), h('h2', {}, 'Осталось вписать адрес и ключ'),
+    h('p', {}, 'Откройте файл index.html в Блокноте, найдите строки SUPABASE_URL и SUPABASE_KEY и впишите между кавычками данные из Supabase. Подробно — в README.txt, шаг 4.')));
+}
+
+// iPhone: ссылку открыли в Safari, а приложение живёт на экране «Домой» отдельно
+function showInstall() {
+  const raw = incoming.raw;
+  const isInvite = !!incoming.invite;
+  mount(page(brand(),
+    h('h2', {}, isInvite ? 'Вас пригласили в семейный чат' : 'Ссылка для входа'),
+    h('p', {}, 'На iPhone приложение ставится на экран «Домой» и хранит данные отдельно от Safari. Поэтому ссылку нужно вставить уже в нём.'),
+    h('ol', { class: 'steps' },
+      h('li', {}, 'Нажмите «Скопировать ссылку».'),
+      h('li', {}, 'В Safari нажмите «Поделиться» (в новых iOS — сначала «⋯») и выберите «На экран „Домой“».'),
+      h('li', {}, isInvite
+        ? 'Откройте иконку «' + APP_NAME + '», выберите «Я приглашён» и вставьте ссылку.'
+        : 'Откройте иконку «' + APP_NAME + '», войдите — приложение само попросит вставить ссылку.')),
+    h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(raw) }, 'Скопировать ссылку'),
+    h('p', { class: 'note', style: 'margin-top:14px' }, 'Ссылка открылась внутри мессенджера? Сначала откройте её в Safari.'),
+    h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: async () => { await acceptIncoming(); route(); } }, 'Продолжить в Safari'))));
+}
+
+async function signUpOrIn(email, password) {
+  if (!email) throw new Error('Впишите email');
+  if (password.length < 8) throw new Error('Пароль — не короче 8 символов');
+  const { data, error } = await sb.auth.signUp({ email, password });
+  if (error) {
+    if (/already/i.test(error.message)) {
+      const r = await sb.auth.signInWithPassword({ email, password });
+      if (r.error) throw new Error('Этот email уже зарегистрирован. Если это вы — проверьте пароль.');
+      return;
+    }
+    throw error;
+  }
+  if (!data.session) throw new Error('В Supabase включено подтверждение email. Выключите «Confirm email» (шаг 3 инструкции) и попробуйте снова.');
+}
+async function createFamily(name) {
+  await newKey();
+  const { error } = await sb.rpc('start_family', { p_name: name });
+  if (error) throw error;
+}
+async function joinWith(link, name) {
+  const p = parseLink(link);
+  if (!p.invite || !p.key) throw new Error('В ссылке не хватает данных. Попросите прислать приглашение заново.');
+  await setKey(p.key);
+  const { error } = await sb.rpc('join_family', { p_code: p.invite, p_name: name });
+  if (error) throw error;
+}
+
+function showAuth(mode) {
+  mode = mode || (incoming && incoming.invite ? 'join' : 'login');
+  const err = h('p', { class: 'form-error', role: 'alert' });
+  const name = input({ type: 'text', maxlength: '40', autocomplete: 'nickname', placeholder: 'Например: Мама, Саша, Дед' });
+  const email = input({ type: 'email', autocomplete: 'email', inputmode: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: 'name@example.com' });
+  const pass = input({ type: 'password', autocomplete: mode === 'login' ? 'current-password' : 'new-password', placeholder: mode === 'login' ? '' : 'Не короче 8 символов' });
+  const link = linkField('Ссылка-приглашение', incoming && incoming.invite ? incoming.raw : '');
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, { login: 'Войти', join: 'Присоединиться', create: 'Создать семью' }[mode]);
+
+  const form = h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
+    if (mode === 'login') {
+      const { error } = await sb.auth.signInWithPassword({ email: email.value.trim(), password: pass.value });
+      if (error) throw error;
+    } else if (mode === 'join') {
+      const nm = needName(name);
+      const p = parseLink(link.input.value);
+      if (!p.invite || !p.key) throw new Error('В ссылке не хватает данных. Попросите прислать приглашение заново.');
+      const { data: ok, error } = await sb.rpc('check_invite', { p_code: p.invite });
+      if (error) throw error;
+      if (!ok) throw new Error('Приглашение не найдено, уже использовано или устарело. Попросите новое.');
+      await signUpOrIn(email.value.trim(), pass.value);
+      await joinWith(link.input.value, nm);
+    } else {
+      const nm = needName(name);
+      await signUpOrIn(email.value.trim(), pass.value);
+      await createFamily(nm);
+    }
+    incoming = null;
+    await route();
+  }); } },
+    mode === 'login' ? null : field('Как вас называть', name),
+    field('Email', email),
+    field('Пароль', pass, mode === 'login' ? null : 'Email нужен только для входа, писем не будет.'),
+    mode === 'join' ? link.el : null,
+    err, btn);
+
+  const tab = (label, m) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(mode === m), class: mode === m ? 'on' : null, onclick: () => showAuth(m) }, label);
+
+  mount(page(brand(),
+    mode === 'create'
+      ? [h('h2', {}, 'Новая семья'), h('p', { class: 'note' }, 'Вы станете администратором и сможете приглашать родных. Создать семью можно только один раз.')]
+      : h('div', { class: 'seg', role: 'tablist' }, tab('Вход', 'login'), tab('Я приглашён', 'join')),
+    form,
+    h('div', { class: 'alt' }, mode === 'create'
+      ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => showAuth('login') }, 'Назад ко входу')
+      : h('button', { class: 'btn ghost small', type: 'button', onclick: () => showAuth('create') }, 'Создать семью (только при первом запуске)')),
+    isIOS && !isStandalone
+      ? h('p', { class: 'note', style: 'margin-top:22px' }, 'Совет: сначала установите приложение — в Safari «Поделиться» → «На экран „Домой“» — и входите уже из него.')
+      : null));
+}
+
+// Вошёл, но ещё не в семье
+function showJoin() {
+  const err = h('p', { class: 'form-error', role: 'alert' });
+  const name = input({ type: 'text', maxlength: '40', autocomplete: 'nickname', placeholder: 'Например: Мама, Саша, Дед' });
+  const link = linkField('Ссылка-приглашение', incoming && incoming.invite ? incoming.raw : '');
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Присоединиться');
+  const createBtn = h('button', { class: 'btn ghost small', type: 'button' }, 'Создать новую семью');
+  createBtn.addEventListener('click', () => busy(createBtn, err, async () => { await createFamily(needName(name)); incoming = null; await route(); }));
+  mount(page(brand(),
+    h('h2', {}, 'Вы ещё не в семье'),
+    h('p', {}, 'Вставьте ссылку-приглашение от администратора семьи.'),
+    h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
+      await joinWith(link.input.value, needName(name)); incoming = null; await route();
+    }); } }, field('Как вас называть', name), link.el, err, btn),
+    h('div', { class: 'alt' }, createBtn, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти'))));
+}
+
+// В семье, но на устройстве нет ключа
+function showNeedKey() {
+  const err = h('p', { class: 'form-error', role: 'alert' });
+  const link = linkField('Ссылка для нового телефона', '');
+  const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Готово');
+  mount(page(brand(),
+    h('h2', {}, 'Нужен ключ семьи'),
+    h('p', {}, 'На этом устройстве нет ключа, которым зашифрована переписка. Попросите любого из семьи открыть меню ⋯ → «Ссылка для нового телефона» и прислать её вам. Или вставьте свою сохранённую.'),
+    h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
+      const p = parseLink(link.input.value);
+      if (!p.key) throw new Error('В этой ссылке нет ключа.');
+      const k = await importKey(p.key);
+      const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(1);
+      if (error) throw error;
+      if (data.length && !(await decryptMsg(data[0], k)).ok) throw new Error('Этот ключ не подходит к переписке вашей семьи.');
+      await setKey(p.key);
+      await route();
+    }); } }, link.el, err, btn),
+    h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти'))));
+}
+
+async function logout() {
+  if (!confirm('Выйти из аккаунта на этом устройстве?')) return;
+  stopChat();
+  try { await sb.auth.signOut(); } catch (e) { /* всё равно выходим */ }
+  me = null; myMember = null;
+  route();
+}
+
+// ───────────── маршрутизация ─────────────
+async function route() {
+  if (!sb) return location.reload();
+  showLoading();
+  let session = null;
+  try { session = (await sb.auth.getSession()).data.session; }
+  catch (e) { return showFatal(errText(e)); }
+  if (!session) return showAuth();
+  me = session.user;
+  const { data, error } = await sb.from('members').select('user_id,name,is_admin').eq('user_id', me.id).maybeSingle();
+  if (error) return showFatal(errText(error), { logout: true });
+  if (!data) return showJoin();
+  myMember = data;
+  if (!familyKey) await loadKey();
+  if (!familyKey) return showNeedKey();
+  showChat();
+}
+async function acceptIncoming() {
+  if (incoming && incoming.key) { try { await setKey(incoming.key); } catch (e) { /* неверный ключ — попросим позже */ } }
+}
+
+// ───────────── чат ─────────────
+function stopChat() {
+  if (!chat) return;
+  if (chat.channel) sb.removeChannel(chat.channel);
+  clearInterval(chat.timer);
+  chat = null;
+}
+
+function showChat() {
+  const status = h('div', { class: 'top-status' }, 'Подключение…');
+  const older = h('button', { class: 'btn ghost small older', type: 'button', hidden: true }, 'Показать более ранние');
+  const msgs = h('div', { class: 'msgs' });
+  const scroll = h('div', { class: 'scroll' }, older, msgs);
+  const ta = h('textarea', { class: 'compose-input', rows: '1', placeholder: 'Сообщение', maxlength: '4000', 'aria-label': 'Сообщение' });
+  const send = h('button', { class: 'send', type: 'button', 'aria-label': 'Отправить' }, iconSend());
+  const hint = installHint();
+  mount(h('div', { class: 'chat' },
+    h('header', { class: 'top' }, brandMark(),
+      h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, APP_NAME), status),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Меню', onclick: openMenu }, iconMore())),
+    hint, scroll, h('div', { class: 'compose' }, ta, send)));
+
+  chat = { scroll, msgs, older, ta, send, status, hint, rows: new Map(), members: new Map(),
+           minId: Infinity, maxId: 0, stick: true, channel: null, timer: null, sending: false, fetching: false };
+
+  older.addEventListener('click', loadOlder);
+  scroll.addEventListener('scroll', () => { if (chat) chat.stick = nearBottom(); }, { passive: true });
+  ta.addEventListener('input', autosize);
+  ta.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!coarse || e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
+  });
+  // чтобы клавиатура не пряталась при нажатии «Отправить»
+  send.addEventListener('pointerdown', (e) => e.preventDefault());
+  send.addEventListener('mousedown', (e) => e.preventDefault());
+  send.addEventListener('click', doSend);
+  chatInit();
+}
+
+async function chatInit() {
+  const c = chat;
+  await loadMembers();
+  const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(PAGE);
+  if (chat !== c) return;
+  if (error) toast(errText(error));
+  else { c.older.hidden = data.length < PAGE; await ingest(data); }
+  if (chat !== c) return;
+  renderAll();
+  scrollBottom();
+  subscribe();
+  c.timer = setInterval(() => { if (document.visibilityState === 'visible') fetchNewer(); }, 20000);
+}
+
+async function loadMembers() {
+  const c = chat;
+  const { data, error } = await sb.from('members').select('user_id,name,is_admin,joined_at').order('joined_at');
+  if (!error && c && chat === c) c.members = new Map(data.map((m) => [m.user_id, m]));
+}
+
+async function ingest(rows) {
+  const c = chat;
+  if (!c || !rows || !rows.length) return [];
+  const fresh = rows.filter((r) => !c.rows.has(r.id));
+  const plain = await Promise.all(fresh.map((r) => decryptMsg(r)));
+  if (chat !== c) return [];
+  let unknown = false;
+  const added = [];
+  fresh.forEach((r, i) => {
+    if (c.rows.has(r.id)) return;
+    c.rows.set(r.id, { id: r.id, sender: r.sender, at: new Date(r.created_at), ok: plain[i].ok, text: plain[i].text });
+    c.minId = Math.min(c.minId, r.id);
+    c.maxId = Math.max(c.maxId, r.id);
+    if (!c.members.has(r.sender)) unknown = true;
+    added.push(r.id);
+  });
+  if (unknown) await loadMembers();
+  return added;
+}
+
+function memberName(id) { const m = chat && chat.members.get(id); return m ? m.name : 'Участник'; }
+
+function linkify(text) {
+  const span = h('span', { class: 'txt' });
+  const re = /https?:\/\/[^\s<>"']+/g;
+  let last = 0, m;
+  while ((m = re.exec(text))) {
+    const url = m[0].replace(/[.,!?;:)\]»]+$/, '');
+    span.append(text.slice(last, m.index), h('a', { href: url, target: '_blank', rel: 'noopener noreferrer' }, url));
+    last = m.index + url.length;
+    re.lastIndex = last;
+  }
+  span.append(text.slice(last));
+  return span;
+}
+
+function msgNode(m, prev) {
+  const mine = m.sender === me.id;
+  const grouped = !!prev && prev.sender === m.sender && (m.at - prev.at) < 5 * 60 * 1000;
+  const bubble = h('div', { class: 'bubble' + (m.ok ? '' : ' locked') },
+    m.ok ? linkify(m.text) : h('span', { class: 'txt' }, 'Не удалось расшифровать'),
+    h('span', { class: 'time' }, fmtTime(m.at)));
+  return h('div', { class: 'msg ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : '') },
+    !mine && !grouped ? h('div', { class: 'who' }, memberName(m.sender)) : null, bubble);
+}
+
+function emptyState() {
+  const alone = chat.members.size <= 1 && myMember.is_admin;
+  return h('div', { class: 'empty' },
+    h('p', {}, 'Здесь пока тихо'),
+    h('p', {}, alone
+      ? 'Пригласите родных: меню ⋯ → «Пригласить в семью». А первое сообщение можно написать уже сейчас.'
+      : 'Напишите первое сообщение.'));
+}
+
+function renderAll() {
+  const c = chat;
+  if (!c) return;
+  const list = [...c.rows.values()].sort((a, b) => a.id - b.id);
+  const frag = document.createDocumentFragment();
+  let prev = null;
+  for (const m of list) {
+    if (!prev || !sameDay(prev.at, m.at)) { frag.append(h('div', { class: 'day' }, dayLabel(m.at))); prev = null; }
+    frag.append(msgNode(m, prev));
+    prev = m;
+  }
+  if (!list.length) frag.append(emptyState());
+  c.msgs.replaceChildren(frag);
+}
+
+function nearBottom() { const s = chat.scroll; return s.scrollHeight - s.scrollTop - s.clientHeight < 120; }
+function scrollBottom() {
+  if (!chat) return;
+  chat.stick = true;
+  requestAnimationFrame(() => { if (chat) chat.scroll.scrollTop = chat.scroll.scrollHeight; });
+}
+function autosize() {
+  const ta = chat && chat.ta;
+  if (!ta) return;
+  ta.style.height = 'auto';
+  ta.style.height = Math.min(ta.scrollHeight + 2, 140) + 'px';
+}
+
+function subscribe() {
+  const c = chat;
+  c.channel = sb.channel('family-messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
+    .subscribe((st) => {
+      if (chat !== c) return;
+      c.status.textContent = st === 'SUBSCRIBED' ? 'Сквозное шифрование' : 'Подключение…';
+      if (st === 'SUBSCRIBED') fetchNewer();
+    });
+}
+
+async function onIncoming(rows) {
+  const c = chat;
+  if (!c) return;
+  const stick = c.stick;
+  const added = await ingest(rows);
+  if (!added.length || chat !== c) return;
+  renderAll();
+  if (stick) scrollBottom();
+  else if (rows.some((r) => r.sender !== me.id)) toast('Новое сообщение внизу');
+}
+
+async function fetchNewer() {
+  const c = chat;
+  if (!c || c.fetching) return;
+  c.fetching = true;
+  try {
+    const { data, error } = await sb.from('messages').select(COLS).gt('id', c.maxId).order('id', { ascending: true }).limit(500);
+    if (!error && data.length) await onIncoming(data);
+  } finally { c.fetching = false; }
+}
+
+async function loadOlder() {
+  const c = chat;
+  if (!c || !isFinite(c.minId)) return;
+  c.older.disabled = true;
+  const { data, error } = await sb.from('messages').select(COLS).lt('id', c.minId).order('id', { ascending: false }).limit(PAGE);
+  if (chat !== c) return;
+  c.older.disabled = false;
+  if (error) return toast(errText(error));
+  c.older.hidden = data.length < PAGE;
+  const fromBottom = c.scroll.scrollHeight - c.scroll.scrollTop;
+  await ingest(data);
+  renderAll();
+  c.scroll.scrollTop = c.scroll.scrollHeight - fromBottom;
+}
+
+async function doSend() {
+  const c = chat;
+  if (!c || c.sending) return;
+  const text = c.ta.value.trim();
+  if (!text) return;
+  c.sending = true; c.send.disabled = true;
+  try {
+    const { iv, body } = await encryptMsg(text, me.id);
+    const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body }).select(COLS).single();
+    if (error) throw error;
+    if (chat !== c) return;
+    c.ta.value = '';
+    autosize();
+    c.stick = true;
+    await onIncoming([data]);
+  } catch (e) {
+    toast('Не отправлено: ' + errText(e));
+  } finally { c.sending = false; c.send.disabled = false; }
+}
+
+// ───────────── меню ─────────────
+function sheet(title, ...content) {
+  const overlay = h('div', { class: 'overlay', role: 'dialog', 'aria-modal': 'true', 'aria-label': title });
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const close = () => { overlay.remove(); document.removeEventListener('keydown', onKey); };
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+  document.addEventListener('keydown', onKey);
+  overlay.append(h('div', { class: 'sheet' },
+    h('div', { class: 'sheet-head' }, h('h2', {}, title),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Закрыть', onclick: close }, iconClose())),
+    ...content));
+  document.body.append(overlay);
+  return close;
+}
+function linkBox(link, shareText) {
+  const ta = h('textarea', { class: 'linkbox', readonly: true, rows: '3', 'aria-label': 'Ссылка' });
+  ta.value = link;
+  ta.addEventListener('focus', () => ta.select());
+  const row = h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(link) }, 'Скопировать'));
+  if (navigator.share) {
+    row.append(h('button', { class: 'btn', type: 'button', onclick: () => {
+      navigator.share({ text: shareText ? shareText + '\n' + link : link }).catch(() => {});
+    } }, 'Поделиться'));
+  }
+  return h('div', {}, ta, row);
+}
+
+function openMenu() {
+  const item = (title, sub, fn, cls) => h('button', { type: 'button', class: cls || null, onclick: () => { close(); fn(); } },
+    h('b', {}, title), h('span', {}, sub));
+  const close = sheet('Меню', h('div', { class: 'menu' },
+    myMember.is_admin ? item('Пригласить в семью', 'Одноразовая ссылка для одного человека', doInvite) : null,
+    item('Ссылка для нового телефона', 'Чтобы войти с другого устройства', showDeviceLink),
+    item('Участники', 'Кто есть в семейном чате', showMembers),
+    item('Код проверки', 'Убедиться, что у всех один ключ', showFingerprint),
+    item('Выйти', 'Из аккаунта на этом устройстве', logout, 'danger')));
+}
+
+async function doInvite() {
+  const { data: code, error } = await sb.rpc('create_invite');
+  if (error) return toast(errText(error));
+  const link = baseUrl() + '#i=' + code + '&k=' + familyKeyB64;
+  sheet('Приглашение',
+    h('p', {}, 'Отправьте эту ссылку одному человеку. Она сработает один раз и действует 7 дней.'),
+    linkBox(link, 'Приглашение в наш семейный чат «' + APP_NAME + '»:'),
+    h('p', { class: 'note' }, 'В ссылке есть ключ шифрования. Отправляйте её только лично, не в общие группы и не в соцсети.'),
+    h('p', { class: 'note' }, 'Открывать нужно в Safari (iPhone) или Chrome (Android), а не внутри мессенджера.'));
+}
+
+function showDeviceLink() {
+  sheet('Ссылка для нового телефона',
+    h('p', {}, 'С этой ссылкой и своим паролем можно войти на другом устройстве и увидеть всю переписку. Её же можно отправить члену семьи, если он сменил телефон.'),
+    linkBox(baseUrl() + '#k=' + familyKeyB64),
+    h('p', { class: 'note' }, 'Сохраните её в надёжном месте, например в заметке под паролем. Это ключ ко всей переписке: никому вне семьи её не давайте.'));
+}
+
+async function showMembers() {
+  await loadMembers();
+  const list = chat ? [...chat.members.values()] : [];
+  sheet('Участники', h('ul', { class: 'people' }, list.map((m) => h('li', {},
+    h('span', { class: 'avatar', style: 'background:' + avatarColor(m.name) }, initials(m.name)),
+    h('div', {}, h('div', {}, m.name + (m.user_id === me.id ? ' (вы)' : '')),
+      m.is_admin ? h('div', { class: 'tag' }, 'администратор') : null)))));
+}
+
+async function showFingerprint() {
+  const code = await keyFingerprint();
+  sheet('Код проверки', h('div', { class: 'code' }, code),
+    h('p', {}, 'У всех членов семьи этот код должен совпадать. Сверьте его при встрече или по телефону. Если у кого-то он другой — у него неправильная ссылка-ключ.'));
+}
+
+function installHint() {
+  if (isStandalone || localStorage.getItem(LS_HINT)) return null;
+  const text = h('p', {});
+  const actions = h('div', { class: 'hint-actions' });
+  const el = h('div', { class: 'hint' }, text, actions);
+  const hide = () => { localStorage.setItem(LS_HINT, '1'); el.remove(); };
+  el.refresh = () => {
+    actions.replaceChildren();
+    if (installEvt) {
+      text.textContent = 'Установите приложение на телефон — так удобнее.';
+      actions.append(h('button', { class: 'btn small primary', type: 'button', onclick: async () => {
+        installEvt.prompt();
+        try { await installEvt.userChoice; } catch (e) { /* пользователь закрыл окно */ }
+        installEvt = null; hide();
+      } }, 'Установить'));
+    } else if (isIOS) {
+      text.textContent = 'Удобнее с экрана «Домой». Скопируйте «Ссылку для нового телефона» из меню ⋯, потом в Safari «Поделиться» → «На экран „Домой“» и войдите там.';
+    } else {
+      text.textContent = 'Установите приложение: меню браузера ⋮ → «Добавить на главный экран».';
+    }
+    actions.append(h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Скрыть подсказку', onclick: hide }, iconClose()));
+  };
+  el.refresh();
+  return el;
+}
+
+// ───────────── запуск ─────────────
+if (window.visualViewport) {
+  visualViewport.addEventListener('resize', fitViewport);
+  visualViewport.addEventListener('scroll', fitViewport);
+}
+addEventListener('resize', fitViewport);
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (chat && chat.hint) chat.hint.refresh(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchNewer(); });
+addEventListener('online', () => fetchNewer());
+
+(async function start() {
+  document.title = APP_NAME;
+  fitViewport();
+  if (location.hash.length > 1) {
+    const p = parseLink(location.hash);
+    if (p.invite || p.key) incoming = { invite: p.invite, key: p.key, raw: location.href };
+    history.replaceState(null, '', location.pathname + location.search);  // убираем ключ из адресной строки
+  }
+  if (!SUPABASE_URL || !SUPABASE_KEY) return showConfig();
+  if (!window.isSecureContext || !window.crypto || !crypto.subtle) return showFatal('Откройте приложение по адресу, который начинается с https://', { reload: true });
+  if (!window.supabase || !window.supabase.createClient) return showFatal('Не загрузилась нужная библиотека. Проверьте интернет и нажмите «Повторить».', { reload: true });
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+    auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
+  });
+  sb.auth.onAuthStateChange((event) => {
+    if (event === 'SIGNED_OUT' && chat) setTimeout(() => { stopChat(); route(); }, 0);
+  });
+  if (incoming && isIOS && !isStandalone) return showInstall();
+  await acceptIncoming();
+  route();
+})();
+</script>
+</body>
+</html>
