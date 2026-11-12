@@ -153,10 +153,42 @@ p{line-height:1.45;margin:0 0 12px}
 .viewer-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px}
 .viewer-bar .icon-btn{color:#fff}
 .viewer-bar .btn{background:rgb(255 255 255 / .14);border-color:transparent;color:#fff}
-.viewer img{flex:1;min-height:0;width:100%;object-fit:contain;padding-bottom:env(safe-area-inset-bottom)}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translate(-50%,8px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s,transform .2s;z-index:100;max-width:90vw;text-align:center;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
+/* ── ответы, правка, медиатека ── */
+.quote{display:block;width:100%;max-width:300px;text-align:left;border:0;border-left:3px solid var(--lamp);background:color-mix(in srgb,currentColor 9%,transparent);border-radius:8px;padding:5px 9px;margin:2px 0 6px;cursor:pointer;font:inherit;color:inherit;white-space:normal}
+.mine .quote{border-left-color:currentColor}
+.quote b{display:block;font-size:13px;line-height:1.3}
+.quote span{display:block;font-size:14px;line-height:1.3;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.msg.flash .bubble{animation:flash 1.8s ease-out}
+@keyframes flash{0%,35%{box-shadow:0 0 0 3px var(--lamp)}100%{box-shadow:0 0 0 0 transparent}}
+@media (pointer:coarse){.bubble{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}.bubble img{-webkit-touch-callout:none}}
+.cbar{display:flex;align-items:center;gap:8px;padding:8px 6px 0 14px;background:var(--surface);border-top:1px solid var(--line)}
+.cbar + .compose{border-top:0}
+.cbar-text{flex:1;min-width:0;border-left:3px solid var(--lamp);padding-left:10px}
+.cbar-text b{display:block;font-size:13px;color:var(--brand)}
+.cbar-text span{display:block;font-size:14px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.menu button.plain{flex-direction:row;align-items:center}
+.gallery{position:fixed;inset:0;z-index:55;background:var(--bg);display:flex;flex-direction:column;animation:fade .15s ease-out}
+.g-tabwrap{padding:10px 12px 0;background:var(--bg)}
+.g-tabwrap .seg{margin:0}
+.g-scroll{flex:1;min-height:0;overflow-y:auto;-webkit-overflow-scrolling:touch;padding-bottom:calc(env(safe-area-inset-bottom) + 20px)}
+.g-month{font-family:var(--round);font-weight:700;font-size:15px;padding:16px 14px 8px}
+.g-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:2px}
+@media (min-width:700px){.g-grid{grid-template-columns:repeat(5,1fr)}}
+.g-cell{aspect-ratio:1;border:0;padding:0;background:var(--surface-2);overflow:hidden;cursor:zoom-in;display:block}
+.g-cell img{width:100%;height:100%;object-fit:cover;display:block}
+.g-voice{padding:10px 14px 12px;border-bottom:1px solid var(--line);background:var(--surface)}
+.g-voice-head{font-size:13px;color:var(--muted);margin-bottom:4px}
+.g-empty{text-align:center;color:var(--muted);padding:64px 24px}
+.g-sentinel{height:1px}
+.viewer-stage{flex:1;min-height:0;position:relative;display:flex;touch-action:pan-y}
+.viewer-stage img{flex:1;min-width:0;min-height:0;width:100%;object-fit:contain;padding-bottom:env(safe-area-inset-bottom);transition:opacity .15s}
+.v-nav{position:absolute;top:50%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:0;background:rgb(255 255 255 / .16);color:#fff;display:grid;place-items:center;cursor:pointer}
+.v-nav.prev{left:10px}.v-nav.next{right:10px}
+.v-actions{display:flex;gap:8px}
+.vcount{color:#fff;opacity:.8;font-size:14px;font-variant-numeric:tabular-nums}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px)}}
@@ -180,7 +212,7 @@ const APP_NAME     = 'Семья';
 const LS_KEY  = 'fc.familyKey';
 const LS_HINT = 'fc.hint2.';
 const PAGE = 200;
-const COLS = 'id,sender,iv,body,created_at';
+const COLS = 'id,sender,iv,body,created_at,kind,edited_at,deleted';
 const CODE_ABC = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // без похожих I, O, 0, 1
 const MAX_REC = 300;                                    // голосовое — до 5 минут
 
@@ -228,6 +260,9 @@ const iconMic   = () => svg('<rect x="9" y="3" width="6" height="11" rx="3"/><pa
 const iconPhoto = () => svg('<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>');
 const iconPlay  = () => svg('<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>', 18);
 const iconPause = () => svg('<path d="M8 5v14M16 5v14" stroke-width="3.2"/>', 18);
+const iconGrid  = () => svg('<rect x="4" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="4" width="6.5" height="6.5" rx="1.5"/><rect x="4" y="13.5" width="6.5" height="6.5" rx="1.5"/><rect x="13.5" y="13.5" width="6.5" height="6.5" rx="1.5"/>');
+const iconBack  = () => svg('<path d="M15 5l-7 7 7 7"/>');
+const iconNext  = () => svg('<path d="M9 5l7 7-7 7"/>');
 const iconTrash = () => svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>');
 function brandMark() {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
@@ -368,9 +403,13 @@ async function decryptMsg(m, key) {
     const pt = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: b64d(m.iv), additionalData: enc.encode(m.sender) }, key || familyKey, b64d(m.body));
     const o = JSON.parse(dec.decode(pt));
-    const f = o.f && typeof o.f === 'object' && /^[A-Za-z0-9_-]{16,64}$/.test(o.f.path || '') && (o.f.kind === 'image' || o.f.kind === 'audio') ? o.f : null;
-    return { ok: true, text: String(o.t == null ? '' : o.t), file: f };
-  } catch (e) { return { ok: false, text: '', file: null }; }
+    const okPath = (x) => typeof x === 'string' && /^[A-Za-z0-9_-]{16,64}$/.test(x);
+    let f = o.f && typeof o.f === 'object' && okPath(o.f.path) && (o.f.kind === 'image' || o.f.kind === 'audio') ? o.f : null;
+    if (f && f.th && !okPath(f.th)) f = Object.assign({}, f, { th: null });
+    const r = o.r && typeof o.r === 'object' && Number.isInteger(o.r.id) && typeof o.r.s === 'string'
+      ? { id: o.r.id, s: o.r.s, t: String(o.r.t || '').slice(0, 140), k: o.r.k === 'image' || o.r.k === 'audio' ? o.r.k : null } : null;
+    return { ok: true, text: String(o.t == null ? '' : o.t), file: f, reply: r };
+  } catch (e) { return { ok: false, text: '', file: null, reply: null }; }
 }
 async function keyFingerprint() {
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', b64d(familyKeyB64)));
@@ -387,6 +426,7 @@ const fmtCode = (c) => c.slice(0, 5) + '-' + c.slice(5);
 const CYR = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X' };
 function findCode(text) {
   const s0 = String(text || '');
+  if (findKey(s0)) return null;   // это резервный ключ, а не код
   const m = s0.match(/[#&?]c=([0-9A-Za-z]{10})(?![0-9A-Za-z])/);
   if (m) return m[1].toUpperCase();
   const s = s0.toUpperCase().replace(/[АВЕКМНОРСТУХ]/g, (ch) => CYR[ch]);
@@ -731,6 +771,7 @@ function stopChat() {
   if (chat.channel) sb.removeChannel(chat.channel);
   if (chat.io) chat.io.disconnect();
   clearInterval(chat.timer);
+  document.querySelectorAll('.gallery, .viewer, .overlay').forEach((el) => el.remove());
   chat = null;
 }
 
@@ -743,26 +784,30 @@ function showChat() {
   const send = h('button', { class: 'send', type: 'button', 'aria-label': 'Отправить' }, iconSend());
   const attach = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Отправить фото' }, iconPhoto());
   const fileInp = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+  const bar = h('div', { class: 'cbar', hidden: true });
   const compose = h('div', { class: 'compose' }, attach, ta, send);
   const hintSlot = h('div', {});
   mount(h('div', { class: 'chat' },
     h('header', { class: 'top' }, brandMark(),
       h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, APP_NAME), status),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Медиатека', onclick: openGallery }, iconGrid()),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Меню', onclick: openMenu }, iconMore())),
-    hintSlot, scroll, compose, fileInp));
+    hintSlot, scroll, bar, compose, fileInp));
 
-  chat = { scroll, msgs, older, ta, send, attach, compose, status, hintSlot, fileInp,
+  chat = { scroll, msgs, older, ta, send, attach, compose, bar, status, hintSlot, fileInp,
            rows: new Map(), members: new Map(), media: new Map(), minId: Infinity, maxId: 0, stick: true,
-           channel: null, timer: null, io: null, sending: false, fetching: false, uploads: 0, online: false };
+           channel: null, timer: null, io: null, sending: false, fetching: false, uploads: 0, online: false,
+           replyTo: null, editing: null, lastActions: 0 };
   chat.io = new IntersectionObserver((entries) => {
     for (const en of entries) if (en.isIntersecting && chat) { chat.io.unobserve(en.target); if (en.target.load) en.target.load(); }
   }, { root: scroll, rootMargin: '600px 0px' });
 
-  older.addEventListener('click', loadOlder);
+  older.addEventListener('click', () => loadOlder());
   scroll.addEventListener('scroll', () => { if (chat) chat.stick = nearBottom(); }, { passive: true });
   ta.addEventListener('input', () => { autosize(); updateAction(); });
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!coarse || e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
+    if (e.key === 'Escape' && chat && (chat.replyTo || chat.editing)) cancelBar();
   });
   // чтобы клавиатура не пряталась при нажатии «Отправить»
   send.addEventListener('pointerdown', (e) => { if (send.dataset.mode === 'send') e.preventDefault(); });
@@ -773,9 +818,42 @@ function showChat() {
     const files = Array.from(fileInp.files || []);
     for (const f of files) await sendPhoto(f);
   });
+
+  // долгое нажатие на сообщение — меню действий
+  let lp = null, suppressClick = false;
+  const cancelLp = () => { if (lp) { clearTimeout(lp.timer); lp = null; } };
+  msgs.addEventListener('touchstart', (e) => {
+    const el = e.target.closest('.msg');
+    if (!el || e.target.closest('a, .play, .abar') || e.touches.length > 1) return;
+    const t = e.touches[0];
+    lp = { x: t.clientX, y: t.clientY, timer: setTimeout(() => {
+      lp = null; suppressClick = true; setTimeout(() => { suppressClick = false; }, 700);
+      if (navigator.vibrate) navigator.vibrate(10);
+      openMsgActions(Number(el.dataset.id));
+    }, 450) };
+  }, { passive: true });
+  msgs.addEventListener('touchmove', (e) => {
+    if (!lp) return;
+    const t = e.touches[0];
+    if (Math.abs(t.clientX - lp.x) > 10 || Math.abs(t.clientY - lp.y) > 10) cancelLp();
+  }, { passive: true });
+  msgs.addEventListener('touchend', cancelLp);
+  msgs.addEventListener('touchcancel', cancelLp);
+  msgs.addEventListener('click', (e) => { if (suppressClick) { e.preventDefault(); e.stopPropagation(); suppressClick = false; } }, true);
+  msgs.addEventListener('contextmenu', (e) => {
+    const el = e.target.closest('.msg');
+    if (!el) return;
+    e.preventDefault(); cancelLp();
+    openMsgActions(Number(el.dataset.id));
+  });
+
   updateAction();
   refreshHint();
   clearBadge();
+  if (!localStorage.getItem('fc.tipActions')) {
+    localStorage.setItem('fc.tipActions', '1');
+    setTimeout(() => toast('Удерживайте сообщение, чтобы ответить, изменить или удалить'), 1200);
+  }
   chatInit();
 }
 
@@ -836,22 +914,24 @@ async function loadMembers() {
 
 async function ingest(rows) {
   const c = chat;
-  if (!c || !rows || !rows.length) return [];
-  const fresh = rows.filter((r) => !c.rows.has(r.id));
-  const plain = await Promise.all(fresh.map((r) => decryptMsg(r)));
-  if (chat !== c) return [];
+  const res = { added: [], changed: [] };
+  if (!c || !rows || !rows.length) return res;
+  const work = rows.filter((r) => { const e = c.rows.get(r.id); return !e || e.body !== r.body || e.deleted !== !!r.deleted; });
+  const plain = await Promise.all(work.map((r) => (r.deleted ? null : decryptMsg(r))));
+  if (chat !== c) return res;
   let unknown = false;
-  const added = [];
-  fresh.forEach((r, i) => {
-    if (c.rows.has(r.id)) return;
-    c.rows.set(r.id, { id: r.id, sender: r.sender, at: new Date(r.created_at), ok: plain[i].ok, text: plain[i].text, file: plain[i].file });
-    c.minId = Math.min(c.minId, r.id);
-    c.maxId = Math.max(c.maxId, r.id);
+  work.forEach((r, i) => {
+    const old = c.rows.get(r.id);
+    if (old && old.body === r.body && old.deleted === !!r.deleted) return;
+    const p = plain[i] || { ok: true, text: '', file: null, reply: null };
+    c.rows.set(r.id, { id: r.id, sender: r.sender, at: new Date(r.created_at), body: r.body, deleted: !!r.deleted,
+                       edited: !!r.edited_at, ok: p.ok, text: p.text, file: p.file, reply: p.reply });
+    if (old) { res.changed.push(r.id); c.media.delete(r.id); }
+    else { res.added.push(r.id); c.minId = Math.min(c.minId, r.id); c.maxId = Math.max(c.maxId, r.id); }
     if (!c.members.has(r.sender)) unknown = true;
-    added.push(r.id);
   });
   if (unknown) await loadMembers();
-  return added;
+  return res;
 }
 
 function memberName(id) { const m = chat && chat.members.get(id); return m ? m.name : 'Участник'; }
@@ -884,54 +964,77 @@ function fileUrl(f) {
   }
   return fileCache.get(f.path);
 }
-async function sendFile(kind, blob, mime, meta) {
+async function uploadEncrypted(blob) {
+  const path = randomPath();
+  const iv = rand(12);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode('file:' + path) }, familyKey, await blob.arrayBuffer());
+  const { error } = await sb.storage.from('files').upload(path, new Blob([ct], { type: 'application/octet-stream' }), { contentType: 'application/octet-stream', upsert: false });
+  if (error) throw error;
+  fileCache.set(path, Promise.resolve(URL.createObjectURL(blob)));   // своё видно сразу, без скачивания
+  return { path, iv: b64e(iv) };
+}
+function loadImg(url) {
+  return new Promise((resolve, reject) => {
+    const i = new Image();
+    i.onload = () => resolve(i);
+    i.onerror = () => reject(new Error('Не удалось открыть фото'));
+    i.src = url;
+  });
+}
+async function drawScaled(img, max, quality) {
+  const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+  const w = Math.max(1, Math.round(img.naturalWidth * s)), hh = Math.max(1, Math.round(img.naturalHeight * s));
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = hh;
+  canvas.getContext('2d').drawImage(img, 0, 0, w, hh);
+  const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', quality));
+  if (!blob) throw new Error('Не удалось сжать фото');
+  return { blob, w, h: hh };
+}
+async function sendPhoto(file) {
+  const c = chat;
+  if (!c) return;
+  c.uploads++; setStatus();
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await loadImg(url);
+    const full = await drawScaled(img, 1600, 0.82);
+    const thumb = await drawScaled(img, 480, 0.72);
+    const [a, b] = await Promise.all([uploadEncrypted(full.blob), uploadEncrypted(thumb.blob)]);
+    await postMsg({ v: 1, t: '', f: { kind: 'image', path: a.path, iv: a.iv, mime: 'image/jpeg', size: full.blob.size, w: full.w, h: full.h, th: b.path, thiv: b.iv } }, 'image');
+  } catch (e) {
+    toast('Фото не отправлено: ' + errText(e));
+  } finally {
+    URL.revokeObjectURL(url);
+    c.uploads--; setStatus();
+  }
+}
+async function sendAudio(blob, type, dur) {
   const c = chat;
   if (!c) return;
   c.uploads++; setStatus();
   try {
-    const path = randomPath();
-    const iv = rand(12);
-    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode('file:' + path) }, familyKey, await blob.arrayBuffer());
-    const { error } = await sb.storage.from('files').upload(path, new Blob([ct], { type: 'application/octet-stream' }), { contentType: 'application/octet-stream', upsert: false });
-    if (error) throw error;
-    fileCache.set(path, Promise.resolve(URL.createObjectURL(blob)));   // своё видно сразу, без скачивания
-    await postMsg({ v: 1, t: '', f: Object.assign({ kind, path, iv: b64e(iv), mime, size: blob.size }, meta) });
-  } finally {
-    c.uploads--; setStatus();
-  }
+    const a = await uploadEncrypted(blob);
+    await postMsg({ v: 1, t: '', f: { kind: 'audio', path: a.path, iv: a.iv, mime: type, size: blob.size, dur } }, 'audio');
+  } catch (e) {
+    toast('Голосовое не отправлено: ' + errText(e));
+  } finally { c.uploads--; setStatus(); }
 }
-async function compressImage(file) {
-  const url = URL.createObjectURL(file);
-  try {
-    const img = await new Promise((resolve, reject) => {
-      const i = new Image();
-      i.onload = () => resolve(i);
-      i.onerror = () => reject(new Error('Не удалось открыть фото'));
-      i.src = url;
-    });
-    const max = 1600;
-    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
-    const w = Math.max(1, Math.round(img.naturalWidth * s)), hh = Math.max(1, Math.round(img.naturalHeight * s));
-    const canvas = document.createElement('canvas');
-    canvas.width = w; canvas.height = hh;
-    canvas.getContext('2d').drawImage(img, 0, 0, w, hh);
-    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
-    if (!blob) throw new Error('Не удалось сжать фото');
-    return { blob, w, h: hh };
-  } finally { URL.revokeObjectURL(url); }
-}
-async function sendPhoto(file) {
-  try {
-    const { blob, w, h: hh } = await compressImage(file);
-    await sendFile('image', blob, 'image/jpeg', { w, h: hh });
-  } catch (e) { toast('Фото не отправлено: ' + errText(e)); }
+const thumbOf = (f) => (f.th && f.thiv ? { path: f.th, iv: f.thiv, mime: 'image/jpeg' } : f);
+function chatImages() {
+  return [...chat.rows.values()].filter((m) => !m.deleted && m.ok && m.file && m.file.kind === 'image')
+    .sort((a, b) => a.id - b.id).map((m) => ({ id: m.id, f: m.file }));
 }
 
-function imageWidget(f) {
+function imageWidget(f, id) {
   const img = h('img', { class: 'photo', alt: 'Фото', decoding: 'async' });
   const el = h('button', { class: 'photo-wrap', type: 'button', 'aria-label': 'Открыть фото', style: f.w && f.h ? 'aspect-ratio:' + f.w + ' / ' + f.h : null }, img);
-  el.load = () => fileUrl(f).then((u) => { img.src = u; }).catch(() => { el.classList.add('failed'); img.remove(); });
-  el.addEventListener('click', () => openViewer(f));
+  el.load = () => fileUrl(thumbOf(f)).then((u) => { img.src = u; }).catch(() => { el.classList.add('failed'); img.remove(); });
+  el.addEventListener('click', () => {
+    if (!chat) return;
+    const items = chatImages();
+    openViewer(items, Math.max(0, items.findIndex((x) => x.id === id)));
+  });
   return el;
 }
 
@@ -984,31 +1087,166 @@ function mediaFor(m) {
   const c = chat;
   let el = c.media.get(m.id);
   if (!el) {
-    el = m.file.kind === 'image' ? imageWidget(m.file) : audioWidget(m.file);
+    el = m.file.kind === 'image' ? imageWidget(m.file, m.id) : audioWidget(m.file);
     c.media.set(m.id, el);
     c.io.observe(el);
   }
   return el;
 }
 
-async function openViewer(f) {
-  let u;
-  try { u = await fileUrl(f); } catch (e) { return toast('Не удалось открыть фото'); }
-  const onKey = (e) => { if (e.key === 'Escape') close(); };
+function openViewer(items, index, opts) {
+  if (!items || !items.length) return;
+  opts = opts || {};
+  let i = Math.min(Math.max(0, index), items.length - 1);
+  const img = h('img', { alt: 'Фото' });
+  const count = h('span', { class: 'vcount' });
+  const onKey = (e) => {
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowRight') go(1);
+    else if (e.key === 'ArrowLeft') go(-1);
+  };
   const close = () => { v.remove(); document.removeEventListener('keydown', onKey); };
+  async function show() {
+    const want = i;
+    count.textContent = items.length > 1 ? (i + 1) + ' из ' + items.length : '';
+    img.style.opacity = '.25';
+    try {
+      const u = await fileUrl(items[i].f);
+      if (want === i) { img.src = u; img.style.opacity = '1'; }
+    } catch (e) { if (want === i) toast('Не удалось открыть фото'); }
+  }
+  function go(d) { const j = i + d; if (j < 0 || j >= items.length) return; i = j; show(); }
   const share = navigator.share ? h('button', { class: 'btn small', type: 'button', onclick: async () => {
     try {
-      const b = await (await fetch(u)).blob();
+      const b = await (await fetch(await fileUrl(items[i].f))).blob();
       const file = new File([b], 'photo.jpg', { type: b.type || 'image/jpeg' });
       if (navigator.canShare && !navigator.canShare({ files: [file] })) return toast('Не получается поделиться этим фото');
       await navigator.share({ files: [file] });
     } catch (e) { /* закрыли окно */ }
-  } }, 'Сохранить или отправить') : null;
+  } }, 'Сохранить') : null;
+  const inChat = h('button', { class: 'btn small', type: 'button', onclick: () => {
+    const id = items[i].id; close(); if (opts.onChat) opts.onChat(); jumpTo(id);
+  } }, 'В чате');
+  const stage = h('div', { class: 'viewer-stage' }, img,
+    items.length > 1 && !coarse ? [
+      h('button', { class: 'v-nav prev', type: 'button', 'aria-label': 'Предыдущее', onclick: () => go(-1) }, iconBack()),
+      h('button', { class: 'v-nav next', type: 'button', 'aria-label': 'Следующее', onclick: () => go(1) }, iconNext())] : null);
+  let sx = null, sy = null;
+  stage.addEventListener('touchstart', (e) => { if (e.touches.length === 1) { sx = e.touches[0].clientX; sy = e.touches[0].clientY; } }, { passive: true });
+  stage.addEventListener('touchend', (e) => {
+    if (sx == null) return;
+    const dx = e.changedTouches[0].clientX - sx, dy = e.changedTouches[0].clientY - sy;
+    sx = null;
+    if (Math.abs(dx) > 50 && Math.abs(dx) > Math.abs(dy)) go(dx < 0 ? 1 : -1);
+    else if (dy > 90 && dy > Math.abs(dx)) close();
+  });
   const v = h('div', { class: 'viewer', role: 'dialog', 'aria-label': 'Фото' },
-    h('div', { class: 'viewer-bar' }, h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Закрыть', onclick: close }, iconClose()), share),
-    h('img', { src: u, alt: 'Фото' }));
+    h('div', { class: 'viewer-bar' },
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Закрыть', onclick: close }, iconClose()),
+      count, h('div', { class: 'v-actions' }, inChat, share)),
+    stage);
   document.addEventListener('keydown', onKey);
   document.body.append(v);
+  show();
+}
+
+// ───────────── медиатека ─────────────
+function monthLabel(d) {
+  const s = d.toLocaleDateString('ru-RU', { month: 'long', year: 'numeric' }).replace(/\s*г\.?\s*$/, '');
+  return s.charAt(0).toUpperCase() + s.slice(1);
+}
+function openGallery() {
+  if (!chat) return;
+  const g = { tab: 'image', rows: [], done: false, loading: false, token: 0, cells: new Map() };
+  const tabs = h('div', { class: 'seg', role: 'tablist' });
+  const body = h('div', {});
+  const sentinel = h('div', { class: 'g-sentinel' });
+  const scroll = h('div', { class: 'g-scroll' }, body, sentinel);
+  const io = new IntersectionObserver((entries) => {
+    for (const en of entries) if (en.isIntersecting) { io.unobserve(en.target); if (en.target.load) en.target.load(); }
+  }, { root: scroll, rootMargin: '400px 0px' });
+  const more = new IntersectionObserver((entries) => { if (entries.some((e) => e.isIntersecting)) loadMore(); }, { root: scroll, rootMargin: '600px 0px' });
+  const close = () => { io.disconnect(); more.disconnect(); v.remove(); if (nowPlaying) nowPlaying.pause(); };
+  const v = h('div', { class: 'gallery', role: 'dialog', 'aria-label': 'Медиатека' },
+    h('header', { class: 'top' },
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Назад', onclick: close }, iconBack()),
+      h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, 'Медиатека'))),
+    h('div', { class: 'g-tabwrap' }, tabs), scroll);
+
+  const tab = (label, t) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(g.tab === t), class: g.tab === t ? 'on' : null, onclick: () => setTab(t) }, label);
+  function setTab(t) {
+    g.tab = t; g.rows = []; g.done = false; g.loading = false; g.token++; g.cells = new Map();
+    if (nowPlaying) nowPlaying.pause();
+    tabs.replaceChildren(tab('Фото', 'image'), tab('Голосовые', 'audio'));
+    body.replaceChildren();
+    scroll.scrollTop = 0;
+    loadMore();
+  }
+  function cell(r) {
+    let el = g.cells.get(r.id);
+    if (el) return el;
+    if (g.tab === 'image') {
+      const img = h('img', { alt: 'Фото', decoding: 'async' });
+      el = h('button', { class: 'g-cell', type: 'button', 'aria-label': 'Открыть фото' }, img);
+      el.load = () => fileUrl(thumbOf(r.f)).then((u) => { img.src = u; }).catch(() => {});
+      el.addEventListener('click', () => openViewer(g.rows.map((x) => ({ id: x.id, f: x.f })), g.rows.findIndex((x) => x.id === r.id), { onChat: close }));
+    } else {
+      el = audioWidget(r.f);
+    }
+    g.cells.set(r.id, el);
+    io.observe(el);
+    return el;
+  }
+  function render() {
+    if (!g.rows.length) {
+      body.replaceChildren(g.done ? h('div', { class: 'g-empty' }, g.tab === 'image' ? 'Фото пока нет' : 'Голосовых пока нет') : h('div', { class: 'spinner' }));
+      return;
+    }
+    const frag = document.createDocumentFragment();
+    let key = null, grid = null;
+    for (const r of g.rows) {
+      if (g.tab === 'image') {
+        const k = r.at.getFullYear() + '-' + r.at.getMonth();
+        if (k !== key) { key = k; frag.append(h('div', { class: 'g-month' }, monthLabel(r.at))); grid = h('div', { class: 'g-grid' }); frag.append(grid); }
+        grid.append(cell(r));
+      } else {
+        const k = r.at.toDateString();
+        if (k !== key) { key = k; frag.append(h('div', { class: 'g-month' }, dayLabel(r.at))); }
+        frag.append(h('div', { class: 'g-voice' }, h('div', { class: 'g-voice-head' }, memberName(r.sender) + ', ' + fmtTime(r.at)), cell(r)));
+      }
+    }
+    body.replaceChildren(frag);
+  }
+  async function loadMore() {
+    if (g.loading || g.done) return;
+    g.loading = true;
+    const token = g.token;
+    if (!g.rows.length) render();
+    try {
+      const from = g.rows.length;
+      const { data, error } = await sb.from('messages').select(COLS).eq('kind', g.tab).eq('deleted', false)
+        .order('id', { ascending: false }).range(from, from + 89);
+      if (token !== g.token) return;
+      if (error) throw error;
+      const plain = await Promise.all(data.map((r) => decryptMsg(r)));
+      if (token !== g.token) return;
+      data.forEach((r, i) => {
+        if (plain[i].ok && plain[i].file && plain[i].file.kind === g.tab) g.rows.push({ id: r.id, sender: r.sender, at: new Date(r.created_at), f: plain[i].file });
+      });
+      if (data.length < 90) g.done = true;
+      render();
+    } catch (e) {
+      if (token === g.token) { g.done = true; render(); toast(errText(e)); }
+    } finally {
+      if (token === g.token) {
+        g.loading = false;
+        if (!g.done && sentinel.getBoundingClientRect().top < scroll.getBoundingClientRect().bottom + 600) setTimeout(loadMore, 0);
+      }
+    }
+  }
+  document.body.append(v);
+  more.observe(sentinel);
+  setTab('image');
 }
 
 // ───────────── голосовые ─────────────
@@ -1067,23 +1305,34 @@ function finishRec(send) {
     if (!send || !chat) return;
     if (dur < 1 || !r.chunks.length) return toast('Слишком короткое голосовое');
     const type = (r.mr.mimeType || r.chunks[0].type || 'audio/mp4').split(';')[0];
-    try { await sendFile('audio', new Blob(r.chunks, { type }), type, { dur }); }
-    catch (e) { toast('Голосовое не отправлено: ' + errText(e)); }
+    await sendAudio(new Blob(r.chunks, { type }), type, dur);
   };
   try { r.mr.stop(); } catch (e) { r.stream.getTracks().forEach((t) => t.stop()); }
 }
 
 // ───────────── сообщения ─────────────
+function snippetOf(m) {
+  if (!m || !m.ok) return 'Сообщение';
+  if (m.file) return m.file.kind === 'image' ? '📷 Фото' : '🎤 Голосовое сообщение';
+  const t = m.text.replace(/\s+/g, ' ').trim();
+  return t.length > 120 ? t.slice(0, 119) + '…' : t;
+}
+function quoteNode(r) {
+  const orig = chat.rows.get(r.id);
+  const text = orig ? (orig.deleted ? 'Удалённое сообщение' : snippetOf(orig)) : r.t;
+  return h('button', { class: 'quote', type: 'button', onclick: (e) => { e.stopPropagation(); jumpTo(r.id); } },
+    h('b', {}, memberName(r.s)), h('span', {}, text));
+}
 function msgNode(m, prev) {
   const mine = m.sender === me.id;
   const grouped = !!prev && prev.sender === m.sender && (m.at - prev.at) < 5 * 60 * 1000;
-  const time = h('span', { class: 'time' }, fmtTime(m.at));
+  const time = h('span', { class: 'time' }, (m.edited ? 'изм. ' : '') + fmtTime(m.at));
   let bubble;
   if (!m.ok) bubble = h('div', { class: 'bubble locked' }, h('span', { class: 'txt' }, 'Не удалось расшифровать'), time);
   else if (m.file && m.file.kind === 'image') bubble = h('div', { class: 'bubble media' }, mediaFor(m), time);
   else if (m.file) bubble = h('div', { class: 'bubble' }, mediaFor(m), time);
-  else bubble = h('div', { class: 'bubble' }, linkify(m.text), time);
-  return h('div', { class: 'msg ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : '') },
+  else bubble = h('div', { class: 'bubble' }, m.reply ? quoteNode(m.reply) : null, linkify(m.text), time);
+  return h('div', { class: 'msg ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : ''), 'data-id': String(m.id) },
     !mine && !grouped ? h('div', { class: 'who' }, memberName(m.sender)) : null, bubble);
 }
 
@@ -1099,7 +1348,7 @@ function emptyState() {
 function renderAll() {
   const c = chat;
   if (!c) return;
-  const list = [...c.rows.values()].sort((a, b) => a.id - b.id);
+  const list = [...c.rows.values()].filter((m) => !m.deleted).sort((a, b) => a.id - b.id);
   const frag = document.createDocumentFragment();
   let prev = null;
   for (const m of list) {
@@ -1128,11 +1377,12 @@ function subscribe() {
   const c = chat;
   c.channel = sb.channel('family-messages')
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
     .subscribe((st) => {
       if (chat !== c) return;
       c.online = st === 'SUBSCRIBED';
       setStatus();
-      if (c.online) fetchNewer();
+      if (c.online) resync();
     });
 }
 
@@ -1140,11 +1390,31 @@ async function onIncoming(rows) {
   const c = chat;
   if (!c) return;
   const stick = c.stick;
-  const added = await ingest(rows);
-  if (!added.length || chat !== c) return;
+  const res = await ingest(rows);
+  if ((!res.added.length && !res.changed.length) || chat !== c) return;
   renderAll();
-  if (stick) scrollBottom();
-  else if (rows.some((r) => r.sender !== me.id)) toast('Новое сообщение внизу');
+  if (res.added.length && stick) scrollBottom();
+  else if (res.added.length && rows.some((r) => res.added.includes(r.id) && r.sender !== me.id)) toast('Новое сообщение внизу');
+}
+
+// подтянуть правки и удаления, которые могли пройти мимо (телефон спал)
+async function resync() {
+  const c = chat;
+  if (!c) return;
+  const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(PAGE);
+  if (!error && chat === c) await onIncoming(data);
+}
+
+async function jumpTo(id) {
+  const c = chat;
+  if (!c) return;
+  let guard = 0;
+  while (!c.rows.has(id) && !c.older.hidden && guard++ < 50 && chat === c) await loadOlder();
+  const el = c.msgs.querySelector('.msg[data-id="' + id + '"]');
+  if (!el) return toast('Сообщение не найдено — возможно, его удалили');
+  c.stick = false;
+  el.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
 }
 
 async function fetchNewer() {
@@ -1172,10 +1442,10 @@ async function loadOlder() {
   c.scroll.scrollTop = c.scroll.scrollHeight - fromBottom;
 }
 
-async function postMsg(obj) {
+async function postMsg(obj, kind) {
   const c = chat;
   const { iv, body } = await encryptMsg(obj, me.id);
-  const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body }).select(COLS).single();
+  const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body, kind: kind || 'text' }).select(COLS).single();
   if (error) throw error;
   if (chat === c) { c.stick = true; await onIncoming([data]); }
 }
@@ -1185,13 +1455,95 @@ async function doSend() {
   if (!c || c.sending) return;
   const text = c.ta.value.trim();
   if (!text) return;
+  const editing = c.editing;
   c.sending = true; c.send.disabled = true;
   try {
-    await postMsg({ v: 1, t: text });
-    if (chat === c) { c.ta.value = ''; autosize(); updateAction(); }
+    if (editing) await saveEdit(editing, text);
+    else {
+      const obj = { v: 1, t: text };
+      if (c.replyTo) obj.r = c.replyTo;
+      await postMsg(obj, 'text');
+    }
+    if (chat === c) { c.ta.value = ''; autosize(); clearBar(); updateAction(); }
   } catch (e) {
-    toast('Не отправлено: ' + errText(e));
+    toast((editing ? 'Не сохранено: ' : 'Не отправлено: ') + errText(e));
   } finally { c.sending = false; c.send.disabled = false; }
+}
+
+function setBar(title, text) {
+  const c = chat;
+  c.bar.replaceChildren(
+    h('div', { class: 'cbar-text' }, h('b', {}, title), h('span', {}, text)),
+    h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Отменить', onclick: cancelBar }, iconClose()));
+  c.bar.hidden = false;
+}
+function clearBar() {
+  const c = chat;
+  if (!c) return;
+  c.replyTo = null; c.editing = null;
+  c.bar.hidden = true; c.bar.replaceChildren();
+}
+function cancelBar() {
+  const c = chat;
+  if (!c) return;
+  if (c.editing) { c.ta.value = ''; autosize(); }
+  clearBar(); updateAction();
+}
+function startReply(m) {
+  const c = chat;
+  if (c.editing) { c.ta.value = ''; autosize(); }
+  c.editing = null;
+  c.replyTo = { id: m.id, s: m.sender, t: snippetOf(m), k: m.file ? m.file.kind : null };
+  setBar('Ответ: ' + memberName(m.sender), snippetOf(m));
+  updateAction();
+  c.ta.focus();
+}
+function startEdit(m) {
+  const c = chat;
+  c.replyTo = null; c.editing = m.id;
+  c.ta.value = m.text; autosize(); updateAction();
+  setBar('Редактирование', snippetOf(m));
+  c.ta.focus();
+}
+async function saveEdit(id, text) {
+  const c = chat;
+  const m = c.rows.get(id);
+  if (!m || m.deleted) throw new Error('Сообщение уже удалено');
+  const obj = { v: 1, t: text };
+  if (m.reply) obj.r = m.reply;
+  const { iv, body } = await encryptMsg(obj, me.id);
+  const { data, error } = await sb.from('messages').update({ iv, body, edited_at: new Date().toISOString() }).eq('id', id).select(COLS).single();
+  if (error) throw error;
+  if (chat === c) await onIncoming([data]);
+}
+async function deleteMsg(m) {
+  if (!confirm('Удалить сообщение у всех?')) return;
+  const c = chat;
+  try {
+    const { data, error } = await sb.from('messages').update({ iv: '', body: '', deleted: true, edited_at: new Date().toISOString() }).eq('id', m.id).select(COLS).single();
+    if (error) throw error;
+    if (m.file) sb.storage.from('files').remove([m.file.path, m.file.th].filter(Boolean)).catch(() => {});
+    if (c && (c.editing === m.id || (c.replyTo && c.replyTo.id === m.id))) cancelBar();
+    if (chat === c) await onIncoming([data]);
+  } catch (e) { toast('Не удалось удалить: ' + errText(e)); }
+}
+function openMsgActions(id) {
+  const c = chat;
+  const m = c && c.rows.get(id);
+  if (!m || m.deleted) return;
+  const now = Date.now();
+  if (now - c.lastActions < 700) return;
+  c.lastActions = now;
+  const mine = m.sender === me.id;
+  const item = (title, fn, cls) => h('button', { type: 'button', class: cls || null, onclick: () => { close(); fn(); } }, h('b', {}, title));
+  const close = sheet(mine ? 'Ваше сообщение' : memberName(m.sender),
+    h('p', { class: 'note' }, snippetOf(m)),
+    h('div', { class: 'menu' },
+      m.ok ? item('Ответить', () => startReply(m)) : null,
+      m.ok && !m.file && m.text ? item('Копировать', () => copyText(m.text)) : null,
+      m.ok && m.file && m.file.kind === 'image' ? item('Открыть фото', () => { const items = chatImages(); openViewer(items, items.findIndex((x) => x.id === m.id)); }) : null,
+      mine && m.ok && !m.file ? item('Изменить', () => startEdit(m)) : null,
+      mine ? item('Удалить у всех', () => deleteMsg(m), 'danger') : null));
 }
 
 // ───────────── меню ─────────────
@@ -1219,6 +1571,7 @@ function openMenu() {
     h('b', {}, title), h('span', {}, sub));
   const close = sheet('Меню', h('div', { class: 'menu' },
     myMember.is_admin ? item('Пригласить в семью', 'Код для одного человека', doInvite) : null,
+    item('Медиатека', 'Все фото и голосовые по датам', openGallery),
     item('Код для нового телефона', 'Чтобы войти на другом устройстве', doDeviceCode),
     item('Уведомления', 'Включить или проверить', showPushSettings),
     item('Участники', 'Кто есть в семейном чате', showMembers),
@@ -1302,7 +1655,7 @@ if (window.visualViewport) {
 }
 addEventListener('resize', fitViewport);
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; refreshHint(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { fetchNewer(); clearBadge(); } });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { resync(); clearBadge(); } });
 addEventListener('online', () => fetchNewer());
 
 (async function start() {
