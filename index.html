@@ -19,7 +19,7 @@
   --bg:#eef1f6; --surface:#ffffff; --surface-2:#e3e8f0; --ink:#1b2333; --muted:#5f6a82; --line:#d5dbe5;
   --brand:#23345a; --lamp:#f0ae32; --lamp-ink:#2a1d05;
   --mine:#23345a; --mine-ink:#f5f7fb; --theirs:#ffffff; --theirs-ink:#1b2333;
-  --danger:#b42318; --focus:#3d6bd6;
+  --danger:#b42318; --focus:#3d6bd6; --rec:#e5484d;
   --round: ui-rounded, "SF Pro Rounded", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
   --sans: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   color-scheme: light;
@@ -36,6 +36,7 @@
 html,body{margin:0;height:100%;overflow:hidden;background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
 #app{position:fixed;left:0;right:0;top:var(--app-top,0px);height:var(--app-h,100dvh);display:flex;flex-direction:column}
 button{font:inherit;color:inherit}
+[hidden]{display:none!important}
 :focus-visible{outline:2px solid var(--focus);outline-offset:2px}
 
 /* ── формы ── */
@@ -55,6 +56,7 @@ p{line-height:1.45;margin:0 0 12px}
 .field-hint{display:block;font-size:13px;color:var(--muted);margin-top:6px;line-height:1.4}
 .input{width:100%;font:inherit;font-size:16px;padding:12px 14px;border-radius:12px;border:1px solid var(--line);background:var(--surface);color:var(--ink);-webkit-appearance:none;appearance:none}
 .input:focus{border-color:var(--focus);outline:none;box-shadow:0 0 0 3px color-mix(in srgb,var(--focus) 25%,transparent)}
+.code-input{font-family:var(--round);font-size:19px;letter-spacing:.08em;font-weight:600}
 .row{display:flex;gap:8px}
 .row .input{flex:1;min-width:0}
 .btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border:1px solid var(--line);background:var(--surface);padding:12px 16px;border-radius:12px;font-weight:600;font-size:16px;cursor:pointer;min-height:46px}
@@ -92,7 +94,7 @@ p{line-height:1.45;margin:0 0 12px}
 .msg.mine{align-self:flex-end;align-items:flex-end}
 .msg.theirs{align-self:flex-start;align-items:flex-start}
 .who{font-size:12.5px;font-weight:600;color:var(--muted);margin:0 0 3px 12px}
-.bubble{padding:8px 12px 7px;border-radius:18px;line-height:1.38;font-size:16px;white-space:pre-wrap;overflow-wrap:anywhere}
+.bubble{position:relative;padding:8px 12px 7px;border-radius:18px;line-height:1.38;font-size:16px;white-space:pre-wrap;overflow-wrap:anywhere}
 .mine .bubble{background:var(--mine);color:var(--mine-ink);border-bottom-right-radius:6px}
 .theirs .bubble{background:var(--theirs);color:var(--theirs-ink);border-bottom-left-radius:6px;box-shadow:0 0 0 1px var(--line)}
 .mine.grouped .bubble{border-top-right-radius:6px}
@@ -100,14 +102,31 @@ p{line-height:1.45;margin:0 0 12px}
 .bubble a{color:inherit}
 .bubble.locked{font-style:italic;opacity:.75}
 .time{float:right;font-size:11px;opacity:.62;margin:7px 0 -3px 10px;white-space:nowrap;font-variant-numeric:tabular-nums}
+.bubble.media{padding:4px;white-space:normal}
+.bubble.media .time{position:absolute;right:10px;bottom:9px;margin:0;float:none;opacity:1;background:rgb(0 0 0 / .5);color:#fff;padding:1px 7px;border-radius:9px}
+.photo-wrap{display:block;width:240px;max-width:100%;max-height:340px;min-height:80px;padding:0;border:0;border-radius:14px;overflow:hidden;background:var(--surface-2);cursor:zoom-in}
+.photo{display:block;width:100%;height:100%;object-fit:cover}
+.photo-wrap.failed{display:grid;place-items:center;color:var(--muted);font-size:13px}
+.photo-wrap.failed::after{content:"Фото не загрузилось"}
+.audio{display:flex;align-items:center;gap:10px;min-width:210px;padding:2px 0 0}
+.play{width:38px;height:38px;flex:none;border-radius:50%;border:0;display:grid;place-items:center;cursor:pointer;background:var(--lamp);color:var(--lamp-ink)}
+.mine .play{background:var(--mine-ink);color:var(--mine)}
+.play:disabled{opacity:.6}
+.abar{flex:1;height:5px;border-radius:3px;background:color-mix(in srgb,currentColor 22%,transparent);cursor:pointer;position:relative}
+.afill{height:100%;width:0;border-radius:3px;background:currentColor}
+.adur{font-size:12.5px;opacity:.8;font-variant-numeric:tabular-nums;min-width:34px;text-align:right}
 .empty{text-align:center;color:var(--muted);padding:56px 24px;max-width:340px;margin:0 auto}
 .empty p:first-child{font-family:var(--round);font-size:19px;font-weight:700;color:var(--ink)}
-.compose{display:flex;align-items:flex-end;gap:8px;padding:8px 10px calc(env(safe-area-inset-bottom) + 8px);background:var(--surface);border-top:1px solid var(--line)}
+.compose{display:flex;align-items:flex-end;gap:6px;padding:8px 8px calc(env(safe-area-inset-bottom) + 8px);background:var(--surface);border-top:1px solid var(--line)}
 .kb .compose{padding-bottom:8px}
+.compose .icon-btn{width:44px;height:44px;color:var(--muted)}
 .compose-input{flex:1;min-width:0;resize:none;font:inherit;font-size:16px;line-height:1.35;padding:10px 14px;border-radius:21px;border:1px solid var(--line);background:var(--bg);color:var(--ink);max-height:140px;display:block}
 .compose-input:focus{outline:none;border-color:var(--focus)}
 .send{width:44px;height:44px;flex:none;border-radius:50%;border:0;background:var(--lamp);color:var(--lamp-ink);display:grid;place-items:center;cursor:pointer}
 .send:disabled{opacity:.5}
+.rec{flex:1;display:flex;align-items:center;gap:10px;min-height:44px;padding:0 6px;font-size:16px;font-variant-numeric:tabular-nums}
+.rec-dot{width:11px;height:11px;border-radius:50%;background:var(--rec);animation:blink 1s ease-in-out infinite}
+.rec-label{color:var(--muted)}
 
 /* ── всплывающие окна ── */
 .overlay{position:fixed;inset:0;background:rgb(8 12 22 / .5);display:flex;align-items:flex-end;justify-content:center;z-index:50;animation:fade .15s ease-out}
@@ -124,18 +143,24 @@ p{line-height:1.45;margin:0 0 12px}
 .linkbox{width:100%;font:13px/1.45 ui-monospace,Menlo,Consolas,monospace;padding:10px 12px;border-radius:12px;border:1px solid var(--line);background:var(--bg);color:var(--ink);resize:none;word-break:break-all;margin:4px 0 10px;display:block}
 .btn-row{display:flex;gap:8px;margin-bottom:14px}
 .btn-row .btn{flex:1;width:auto}
-.code{font-family:var(--round);font-size:30px;font-weight:700;letter-spacing:.06em;text-align:center;padding:18px 10px;background:var(--surface-2);border-radius:14px;margin:6px 0 14px;font-variant-numeric:tabular-nums}
+.code{font-family:var(--round);font-size:30px;font-weight:700;letter-spacing:.06em;text-align:center;padding:18px 10px;background:var(--surface-2);border-radius:14px;margin:6px 0 14px;font-variant-numeric:tabular-nums;user-select:all;-webkit-user-select:all}
 .people{list-style:none;padding:0;margin:0}
 .people li{display:flex;align-items:center;gap:12px;padding:10px 0;border-bottom:1px solid var(--line)}
 .people li:last-child{border-bottom:0}
 .avatar{width:38px;height:38px;border-radius:50%;display:grid;place-items:center;font-weight:700;color:#fff;flex:none}
 .tag{font-size:12.5px;color:var(--muted)}
+.viewer{position:fixed;inset:0;z-index:60;background:#000;display:flex;flex-direction:column;animation:fade .15s ease-out}
+.viewer-bar{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:calc(env(safe-area-inset-top) + 8px) 10px 8px}
+.viewer-bar .icon-btn{color:#fff}
+.viewer-bar .btn{background:rgb(255 255 255 / .14);border-color:transparent;color:#fff}
+.viewer img{flex:1;min-height:0;width:100%;object-fit:contain;padding-bottom:env(safe-area-inset-bottom)}
 .toast{position:fixed;left:50%;bottom:calc(env(safe-area-inset-bottom) + 84px);transform:translate(-50%,8px);background:var(--ink);color:var(--bg);padding:10px 16px;border-radius:12px;font-size:14px;opacity:0;transition:opacity .2s,transform .2s;z-index:100;max-width:90vw;text-align:center;pointer-events:none}
 .toast.on{opacity:1;transform:translate(-50%,0)}
 
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px)}}
+@keyframes blink{50%{opacity:.25}}
 @media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
 </style>
 </head>
@@ -146,32 +171,32 @@ p{line-height:1.45;margin:0 0 12px}
 <script>
 'use strict';
 
-// ═══════════════ НАСТРОЙКИ — впишите свои данные из Supabase ═══════════════
-const SUPABASE_URL = 'https://ygxkeqxuzkslrcukjyuu.supabase.co';   // Project URL, например: 'https://abcdefghijk.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_WJqWcvbm8Ldr6quJwFOKkA_SwgGJ6-v';   // Publishable key, начинается с 'sb_publishable_'
+// ═══════════════ НАСТРОЙКИ ═══════════════
+const SUPABASE_URL = 'https://ygxkeqxuzkslrcukjyuu.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_WJqWcvbm8Ldr6quJwFOKkA_SwgGJ6-v';
 const APP_NAME     = 'Семья';
-// ═════════════════════════════════════════════════════════════════════════════
+// ═════════════════════════════════════════
 
 const LS_KEY  = 'fc.familyKey';
-const LS_HINT = 'fc.hintHidden';
+const LS_HINT = 'fc.hint2.';
 const PAGE = 200;
 const COLS = 'id,sender,iv,body,created_at';
+const CODE_ABC = '23456789ABCDEFGHJKLMNPQRSTUVWXYZ';   // без похожих I, O, 0, 1
+const MAX_REC = 300;                                    // голосовое — до 5 минут
 
 const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
 const isStandalone = matchMedia('(display-mode: standalone)').matches || navigator.standalone === true;
 const coarse = matchMedia('(pointer: coarse)').matches;
 
 const app = document.getElementById('app');
-let sb = null;            // клиент Supabase
-let me = null;            // текущий пользователь
-let myMember = null;      // моя запись в семье
-let familyKey = null;     // ключ шифрования семьи
-let familyKeyB64 = null;
-let incoming = null;      // данные из ссылки: {invite, key, raw}
+let sb = null, me = null, myMember = null;
+let familyKey = null, familyKeyB64 = null;
+let incoming = null;      // из ссылки: {code, key, old, raw}
 let chat = null;          // состояние экрана чата
-let installEvt = null;
+let installEvt = null, swReg = null, rec = null, nowPlaying = null;
+const fileCache = new Map();
 
-// ───────────── мелкие помощники ─────────────
+// ───────────── помощники ─────────────
 function h(tag, attrs, ...children) {
   const el = document.createElement(tag);
   for (const [k, v] of Object.entries(attrs || {})) {
@@ -191,7 +216,7 @@ function svg(inner, size) {
   s.setAttribute('viewBox', '0 0 24 24');
   s.setAttribute('width', size || 22); s.setAttribute('height', size || 22);
   s.setAttribute('fill', 'none'); s.setAttribute('stroke', 'currentColor');
-  s.setAttribute('stroke-width', '2.2'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
+  s.setAttribute('stroke-width', '2.1'); s.setAttribute('stroke-linecap', 'round'); s.setAttribute('stroke-linejoin', 'round');
   s.setAttribute('aria-hidden', 'true');
   s.innerHTML = inner;
   return s;
@@ -199,10 +224,25 @@ function svg(inner, size) {
 const iconSend  = () => svg('<path d="M12 19V5M5.5 11.5 12 5l6.5 6.5"/>');
 const iconMore  = () => svg('<circle cx="5" cy="12" r="1.4" fill="currentColor"/><circle cx="12" cy="12" r="1.4" fill="currentColor"/><circle cx="19" cy="12" r="1.4" fill="currentColor"/>');
 const iconClose = () => svg('<path d="M6 6l12 12M18 6 6 18"/>', 20);
+const iconMic   = () => svg('<rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/>');
+const iconPhoto = () => svg('<rect x="3" y="5" width="18" height="14" rx="3"/><circle cx="9" cy="10" r="1.8"/><path d="m4 17 5-4.5 4 3.5 3-2.5 4 3.5"/>');
+const iconPlay  = () => svg('<path d="M8 5.5v13l10.5-6.5z" fill="currentColor"/>', 18);
+const iconPause = () => svg('<path d="M8 5v14M16 5v14" stroke-width="3.2"/>', 18);
+const iconTrash = () => svg('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13h10l1-13M9 7V4h6v3"/>');
 function brandMark() {
   const s = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
   s.setAttribute('viewBox', '0 0 64 64'); s.setAttribute('class', 'brand-mark'); s.setAttribute('aria-hidden', 'true');
-  s.innerHTML = '<rect width="64" height="64" rx="15" fill="#23345a"/><path d="M32 13 11 31h6v20h30V31h6z" fill="#3b5287"/><rect x="25.5" y="33" width="13" height="12" rx="1.5" fill="#f0ae32"/><path d="M32 33v12M25.5 39h13" stroke="#3b5287" stroke-width="1.8"/>';
+  s.innerHTML = '<rect width="64" height="64" rx="15" fill="#23345a"/><path d="M32 7.5 53.2 19.75v24.5L32 56.5 10.8 44.25v-24.5z" fill="#2c4172"/>'
+    + '<ellipse cx="21.5" cy="26" rx="10" ry="6.2" transform="rotate(-30 21.5 26)" fill="#eaf0fa" fill-opacity=".92"/>'
+    + '<ellipse cx="42.5" cy="26" rx="10" ry="6.2" transform="rotate(30 42.5 26)" fill="#eaf0fa" fill-opacity=".92"/>'
+    + '<path d="M30.2 50.5h3.6L32 55.5z" fill="#c98a1c"/><ellipse cx="32" cy="38" rx="11" ry="13.5" fill="#f0ae32"/>'
+    + '<path d="M21.6 33.2h20.8a12 12 0 0 1 .5 4.4H21.1a12 12 0 0 1 .5-4.4z" fill="#2a1d05"/>'
+    + '<path d="M21.4 41.6h21.2a11 11 0 0 1-1.2 4.4H22.6a11 11 0 0 1-1.2-4.4z" fill="#2a1d05"/>'
+    + '<circle cx="32" cy="20.8" r="6.2" fill="#e09a1e"/>'
+    + '<path d="M29.6 15.6c-1.2-2.8-3-4.6-5.4-5.4M34.4 15.6c1.2-2.8 3-4.6 5.4-5.4" stroke="#f0ae32" stroke-width="1.7" stroke-linecap="round" fill="none"/>'
+    + '<circle cx="23.8" cy="10" r="1.7" fill="#f0ae32"/><circle cx="40.2" cy="10" r="1.7" fill="#f0ae32"/>'
+    + '<circle cx="29.7" cy="20.6" r="1.25" fill="#2a1d05"/><circle cx="34.3" cy="20.6" r="1.25" fill="#2a1d05"/>'
+    + '<path d="M30.4 23.4q1.6 1.2 3.2 0" stroke="#2a1d05" stroke-width="1" stroke-linecap="round" fill="none"/>';
   return s;
 }
 function toast(text) {
@@ -215,7 +255,7 @@ async function copyText(text) {
   try { await navigator.clipboard.writeText(text); toast('Скопировано'); return; } catch (e) { /* запасной способ ниже */ }
   const ta = h('textarea', { readonly: true, style: 'position:fixed;top:0;left:0;opacity:0' });
   ta.value = text; document.body.append(ta); ta.select();
-  try { document.execCommand('copy'); toast('Скопировано'); } catch (e) { toast('Не получилось. Выделите ссылку и скопируйте вручную'); }
+  try { document.execCommand('copy'); toast('Скопировано'); } catch (e) { toast('Не получилось. Выделите текст и скопируйте вручную'); }
   ta.remove();
 }
 function errText(e) {
@@ -227,8 +267,11 @@ function errText(e) {
     [/Unable to validate email|invalid format|email address .* invalid/i, 'Проверьте email'],
     [/rate limit|too many/i, 'Слишком много попыток. Подождите пару минут'],
     [/Failed to fetch|NetworkError|Load failed|network/i, 'Нет связи с сервером. Проверьте интернет'],
-    [/Email not confirmed/i, 'Email не подтверждён. Выключите «Confirm email» в Supabase (шаг 3 инструкции)'],
+    [/Email not confirmed/i, 'Email не подтверждён. Выключите «Confirm email» в Supabase'],
     [/Signups not allowed|signup is disabled/i, 'В Supabase выключена регистрация. Включите «Allow new users to sign up»'],
+    [/Could not find the function|schema cache/i, 'База ещё не обновлена. Выполните обновление в Supabase (SQL Editor)'],
+    [/Bucket not found/i, 'Хранилище для фото не создано. Выполните обновление в Supabase (SQL Editor)'],
+    [/row-level security|violates/i, 'Нет доступа. Войдите в семью заново'],
   ];
   for (const [re, t] of known) if (re.test(m)) return t;
   return m;
@@ -246,6 +289,7 @@ async function busy(btn, err, fn) {
 const baseUrl = () => location.origin + location.pathname;
 const sameDay = (a, b) => a.getFullYear() === b.getFullYear() && a.getMonth() === b.getMonth() && a.getDate() === b.getDate();
 const fmtTime = (d) => d.toLocaleTimeString('ru-RU', { hour: '2-digit', minute: '2-digit' });
+const fmtDur = (s) => { s = Math.max(0, Math.round(s || 0)); return Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0'); };
 function dayLabel(d) {
   const now = new Date(), y = new Date(); y.setDate(now.getDate() - 1);
   if (sameDay(d, now)) return 'Сегодня';
@@ -256,6 +300,27 @@ function initials(name) { return (name || '?').trim().charAt(0).toUpperCase(); }
 function avatarColor(name) {
   let x = 0; for (const ch of name || '') x = (x * 31 + ch.codePointAt(0)) >>> 0;
   return 'hsl(' + (x % 360) + ' 42% 44%)';
+}
+
+// ───────────── хранилище для фонового помощника ─────────────
+function idbOpen() {
+  return new Promise((resolve, reject) => {
+    const r = indexedDB.open('semya', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('kv');
+    r.onsuccess = () => resolve(r.result);
+    r.onerror = () => reject(r.error);
+  });
+}
+async function idbSet(k, v) {
+  try {
+    const db = await idbOpen();
+    await new Promise((resolve, reject) => {
+      const tx = db.transaction('kv', 'readwrite');
+      tx.objectStore('kv').put(v, k);
+      tx.oncomplete = resolve; tx.onerror = () => reject(tx.error);
+    });
+    db.close();
+  } catch (e) { /* без этого уведомления просто будут без текста */ }
 }
 
 // ───────────── шифрование ─────────────
@@ -272,37 +337,40 @@ function b64d(str) {
   for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i);
   return out;
 }
+const rand = (n) => crypto.getRandomValues(new Uint8Array(n));
 async function importKey(b64) {
   const raw = b64d(b64);
-  if (raw.length !== 32) throw new Error('Неверный ключ в ссылке');
+  if (raw.length !== 32) throw new Error('Неверный ключ');
   return crypto.subtle.importKey('raw', raw, { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']);
 }
 async function setKey(b64) {
   familyKey = await importKey(b64);
   familyKeyB64 = b64;
   localStorage.setItem(LS_KEY, b64);
+  await idbSet('familyKey', b64);
 }
 async function loadKey() {
   const k = localStorage.getItem(LS_KEY);
   if (!k) return;
-  try { familyKey = await importKey(k); familyKeyB64 = k; } catch (e) { localStorage.removeItem(LS_KEY); }
+  try { familyKey = await importKey(k); familyKeyB64 = k; idbSet('familyKey', k); }
+  catch (e) { localStorage.removeItem(LS_KEY); }
 }
-async function newKey() { await setKey(b64e(crypto.getRandomValues(new Uint8Array(32)))); }
+async function newKey() { await setKey(b64e(rand(32))); }
 
-// Текст шифруется AES-GCM. Отправитель вшит в проверку: подменить автора на сервере нельзя.
-async function encryptMsg(text, senderId) {
-  const iv = crypto.getRandomValues(new Uint8Array(12));
-  const data = enc.encode(JSON.stringify({ v: 1, t: text }));
-  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(senderId) }, familyKey, data);
+// Сообщение — JSON {t: текст, f: файл}. Отправитель вшит в проверку: подменить автора на сервере нельзя.
+async function encryptMsg(obj, senderId) {
+  const iv = rand(12);
+  const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode(senderId) }, familyKey, enc.encode(JSON.stringify(obj)));
   return { iv: b64e(iv), body: b64e(ct) };
 }
 async function decryptMsg(m, key) {
   try {
     const pt = await crypto.subtle.decrypt(
       { name: 'AES-GCM', iv: b64d(m.iv), additionalData: enc.encode(m.sender) }, key || familyKey, b64d(m.body));
-    const obj = JSON.parse(dec.decode(pt));
-    return { ok: true, text: String(obj.t == null ? '' : obj.t) };
-  } catch (e) { return { ok: false, text: '' }; }
+    const o = JSON.parse(dec.decode(pt));
+    const f = o.f && typeof o.f === 'object' && /^[A-Za-z0-9_-]{16,64}$/.test(o.f.path || '') && (o.f.kind === 'image' || o.f.kind === 'audio') ? o.f : null;
+    return { ok: true, text: String(o.t == null ? '' : o.t), file: f };
+  } catch (e) { return { ok: false, text: '', file: null }; }
 }
 async function keyFingerprint() {
   const d = new Uint8Array(await crypto.subtle.digest('SHA-256', b64d(familyKeyB64)));
@@ -310,12 +378,53 @@ async function keyFingerprint() {
   for (let i = 0; i < 8; i += 2) parts.push(String(((d[i] << 8) | d[i + 1]) % 10000).padStart(4, '0'));
   return parts.join(' ');
 }
-// Ссылки: #i=<приглашение>&k=<ключ>  или  #k=<ключ>
-function parseLink(str) {
-  str = String(str || '');
-  const i = str.match(/[#&?]i=([0-9a-f]{32})(?![0-9a-zA-Z])/);
-  const k = str.match(/[#&?]k=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/);
-  return { invite: i ? i[1] : null, key: k ? k[1] : null };
+
+// ───────────── коды: приглашение и новый телефон ─────────────
+// Код из 10 знаков. Из него на телефоне выводятся адрес записи и ключ, которым
+// зашифрован ключ семьи. Сам код и ключ семьи на сервер не попадают.
+function randomCode() { return Array.from(rand(10), (x) => CODE_ABC[x & 31]).join(''); }
+const fmtCode = (c) => c.slice(0, 5) + '-' + c.slice(5);
+const CYR = { 'А': 'A', 'В': 'B', 'Е': 'E', 'К': 'K', 'М': 'M', 'Н': 'H', 'О': 'O', 'Р': 'P', 'С': 'C', 'Т': 'T', 'У': 'Y', 'Х': 'X' };
+function findCode(text) {
+  const s0 = String(text || '');
+  const m = s0.match(/[#&?]c=([0-9A-Za-z]{10})(?![0-9A-Za-z])/);
+  if (m) return m[1].toUpperCase();
+  const s = s0.toUpperCase().replace(/[АВЕКМНОРСТУХ]/g, (ch) => CYR[ch]);
+  const m2 = s.match(/(?:^|[^0-9A-Z])([2-9A-HJ-NP-Z]{5})[\s-]?([2-9A-HJ-NP-Z]{5})(?![0-9A-Z])/);
+  if (m2) return m2[1] + m2[2];
+  const only = s.replace(/[^0-9A-Z]/g, '');
+  return only.length === 10 && [...only].every((c) => CODE_ABC.includes(c)) ? only : null;
+}
+function findKey(text) {
+  const s = String(text || '').replace(/&amp;/g, '&').replace(/%23/gi, '#').replace(/%26/gi, '&').replace(/%3D/gi, '=');
+  const m = s.match(/[#&?]k=([A-Za-z0-9_-]{43})(?![A-Za-z0-9_-])/);
+  return m ? m[1] : null;
+}
+const isOldInvite = (text) => /[#&?]i=[0-9a-f]{32}/.test(String(text || ''));
+async function codeKeys(code) {
+  const base = await crypto.subtle.importKey('raw', enc.encode(code), 'PBKDF2', false, ['deriveBits']);
+  const bits = new Uint8Array(await crypto.subtle.deriveBits(
+    { name: 'PBKDF2', salt: enc.encode('semya-code:' + SUPABASE_URL), iterations: 300000, hash: 'SHA-256' }, base, 512));
+  return {
+    lookup: b64e(bits.slice(0, 32)),
+    kek: await crypto.subtle.importKey('raw', bits.slice(32), { name: 'AES-GCM' }, false, ['encrypt', 'decrypt']),
+  };
+}
+async function makeCode(kind) {
+  const code = randomCode();
+  const { lookup, kek } = await codeKeys(code);
+  const iv = rand(12);
+  const blob = await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, kek, b64d(familyKeyB64));
+  const { error } = await sb.rpc('create_code', { p_kind: kind, p_lookup: lookup, p_blob: b64e(blob), p_iv: b64e(iv) });
+  if (error) throw error;
+  return code;
+}
+async function unwrapFamilyKey(kek, res) {
+  if (!res || !res.blob || !res.iv) throw new Error('Не удалось получить ключ семьи. Попросите новый код.');
+  let raw;
+  try { raw = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(res.iv) }, kek, b64d(res.blob)); }
+  catch (e) { throw new Error('Код не подошёл к ключу. Попросите новый код.'); }
+  await setKey(b64e(raw));
 }
 
 // ───────────── экран и клавиатура ─────────────
@@ -328,7 +437,7 @@ function fitViewport() {
   if (chat && chat.stick) scrollBottom();
 }
 
-// ───────────── экраны ─────────────
+// ───────────── общие экраны ─────────────
 function mount(node) { stopChat(); app.replaceChildren(node); }
 function page(...children) { return h('div', { class: 'screen' }, h('div', { class: 'wrap' }, ...children)); }
 function brand() {
@@ -340,19 +449,30 @@ function field(label, control, hint) {
   return h('label', { class: 'field' }, h('span', { class: 'field-label' }, label), control,
     hint ? h('span', { class: 'field-hint' }, hint) : null);
 }
-function linkField(label, initial) {
-  const inp = input({ type: 'text', 'aria-label': label, placeholder: 'Вставьте ссылку целиком', autocapitalize: 'off', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false' });
-  if (initial) inp.value = initial;
+function codeField(label, initial, hint) {
+  const inp = input({ class: 'input code-input', type: 'text', 'aria-label': label, placeholder: 'XXXXX-XXXXX', autocapitalize: 'characters', autocomplete: 'off', autocorrect: 'off', spellcheck: 'false' });
+  if (initial) inp.value = fmtCode(initial);
+  inp.addEventListener('blur', () => { const c = findCode(inp.value); if (c) inp.value = fmtCode(c); });
   const paste = h('button', { class: 'btn small', type: 'button', onclick: async () => {
-    try { const t = await navigator.clipboard.readText(); if (t) inp.value = t.trim(); }
+    try { const t = await navigator.clipboard.readText(); const c = findCode(t); inp.value = c ? fmtCode(c) : (t || '').trim(); }
     catch (e) { inp.focus(); toast('Нажмите на поле и выберите «Вставить»'); }
   } }, 'Вставить');
-  return { el: h('div', { class: 'field' }, h('span', { class: 'field-label' }, label), h('div', { class: 'row' }, inp, paste)), input: inp };
+  return {
+    el: h('div', { class: 'field' }, h('span', { class: 'field-label' }, label), h('div', { class: 'row' }, inp, paste),
+      hint ? h('span', { class: 'field-hint' }, hint) : null),
+    input: inp,
+  };
 }
 function needName(inp) {
   const v = inp.value.trim();
   if (!v) throw new Error('Впишите, как вас называть');
   return v.slice(0, 40);
+}
+function needInviteCode(text) {
+  const code = findCode(text);
+  if (code) return code;
+  if (isOldInvite(text)) throw new Error('Это приглашение старого образца. Попросите новое — теперь оно с кодом из 10 знаков.');
+  throw new Error('Введите код из 10 знаков, например ABCDE-FGHJK.');
 }
 
 function showLoading() { mount(page(brand(), h('div', { class: 'spinner', role: 'status', 'aria-label': 'Загрузка' }))); }
@@ -364,27 +484,29 @@ function showFatal(msg, opts) {
     opts.logout ? h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти из аккаунта')) : null));
 }
 
-function showConfig() {
-  mount(page(brand(), h('h2', {}, 'Осталось вписать адрес и ключ'),
-    h('p', {}, 'Откройте файл index.html в Блокноте, найдите строки SUPABASE_URL и SUPABASE_KEY и впишите между кавычками данные из Supabase. Подробно — в README.txt, шаг 4.')));
-}
-
-// iPhone: ссылку открыли в Safari, а приложение живёт на экране «Домой» отдельно
+// iPhone: ссылку открыли в Safari, а приложение с экрана «Домой» хранит данные отдельно
 function showInstall() {
+  if (incoming.code) {
+    const code = incoming.code;
+    mount(page(brand(),
+      h('h2', {}, 'Вас пригласили в семейный чат'),
+      h('p', {}, 'Ваш код приглашения:'),
+      h('div', { class: 'code' }, fmtCode(code)),
+      h('ol', { class: 'steps' },
+        h('li', {}, 'Запомните код или нажмите «Скопировать код».'),
+        h('li', {}, 'В Safari нажмите «Поделиться» (в новых iOS — сначала «⋯») и выберите «На экран „Домой“».'),
+        h('li', {}, 'Откройте иконку «' + APP_NAME + '» с пчелой, выберите «Я приглашён» и введите код.')),
+      h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(fmtCode(code)) }, 'Скопировать код'),
+      h('p', { class: 'note', style: 'margin-top:14px' }, 'Ссылка открылась внутри мессенджера? Сначала откройте её в Safari.'),
+      h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: () => route() }, 'Продолжить без установки'))));
+    return;
+  }
   const raw = incoming.raw;
-  const isInvite = !!incoming.invite;
   mount(page(brand(),
-    h('h2', {}, isInvite ? 'Вас пригласили в семейный чат' : 'Ссылка для входа'),
-    h('p', {}, 'На iPhone приложение ставится на экран «Домой» и хранит данные отдельно от Safari. Поэтому ссылку нужно вставить уже в нём.'),
-    h('ol', { class: 'steps' },
-      h('li', {}, 'Нажмите «Скопировать ссылку».'),
-      h('li', {}, 'В Safari нажмите «Поделиться» (в новых iOS — сначала «⋯») и выберите «На экран „Домой“».'),
-      h('li', {}, isInvite
-        ? 'Откройте иконку «' + APP_NAME + '», выберите «Я приглашён» и вставьте ссылку.'
-        : 'Откройте иконку «' + APP_NAME + '», войдите — приложение само попросит вставить ссылку.')),
+    h('h2', {}, 'Резервный ключ'),
+    h('p', {}, 'Приложение с экрана «Домой» хранит данные отдельно от Safari. Скопируйте ссылку, установите приложение, войдите — и вставьте её, когда приложение попросит.'),
     h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(raw) }, 'Скопировать ссылку'),
-    h('p', { class: 'note', style: 'margin-top:14px' }, 'Ссылка открылась внутри мессенджера? Сначала откройте её в Safari.'),
-    h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: async () => { await acceptIncoming(); route(); } }, 'Продолжить в Safari'))));
+    h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: async () => { await acceptIncomingKey(); route(); } }, 'Продолжить в Safari'))));
 }
 
 async function signUpOrIn(email, password) {
@@ -399,28 +521,31 @@ async function signUpOrIn(email, password) {
     }
     throw error;
   }
-  if (!data.session) throw new Error('В Supabase включено подтверждение email. Выключите «Confirm email» (шаг 3 инструкции) и попробуйте снова.');
+  if (!data.session) throw new Error('В Supabase включено подтверждение email. Выключите «Confirm email» и попробуйте снова.');
 }
 async function createFamily(name) {
   await newKey();
   const { error } = await sb.rpc('start_family', { p_name: name });
   if (error) throw error;
 }
-async function joinWith(link, name) {
-  const p = parseLink(link);
-  if (!p.invite || !p.key) throw new Error('В ссылке не хватает данных. Попросите прислать приглашение заново.');
-  await setKey(p.key);
-  const { error } = await sb.rpc('join_family', { p_code: p.invite, p_name: name });
+async function joinByCode(code, name) {
+  const { lookup, kek } = await codeKeys(code);
+  const { data, error } = await sb.rpc('join_with_code', { p_lookup: lookup, p_name: name });
   if (error) throw error;
+  await unwrapFamilyKey(kek, data);
+}
+function doneIncoming() {
+  incoming = null;
+  if (location.hash) history.replaceState(null, '', location.pathname + location.search);
 }
 
 function showAuth(mode) {
-  mode = mode || (incoming && incoming.invite ? 'join' : 'login');
-  const err = h('p', { class: 'form-error', role: 'alert' });
+  mode = mode || (incoming && (incoming.code || incoming.old) ? 'join' : 'login');
+  const err = h('p', { class: 'form-error', role: 'alert' }, incoming && incoming.old ? 'Это приглашение старого образца. Попросите новое — теперь оно с кодом.' : null);
   const name = input({ type: 'text', maxlength: '40', autocomplete: 'nickname', placeholder: 'Например: Мама, Саша, Дед' });
   const email = input({ type: 'email', autocomplete: 'email', inputmode: 'email', autocapitalize: 'off', spellcheck: 'false', placeholder: 'name@example.com' });
   const pass = input({ type: 'password', autocomplete: mode === 'login' ? 'current-password' : 'new-password', placeholder: mode === 'login' ? '' : 'Не короче 8 символов' });
-  const link = linkField('Ссылка-приглашение', incoming && incoming.invite ? incoming.raw : '');
+  const codeF = codeField('Код приглашения', incoming && incoming.code, 'Он есть в сообщении с приглашением.');
   const btn = h('button', { class: 'btn primary', type: 'submit' }, { login: 'Войти', join: 'Присоединиться', create: 'Создать семью' }[mode]);
 
   const form = h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
@@ -429,25 +554,25 @@ function showAuth(mode) {
       if (error) throw error;
     } else if (mode === 'join') {
       const nm = needName(name);
-      const p = parseLink(link.input.value);
-      if (!p.invite || !p.key) throw new Error('В ссылке не хватает данных. Попросите прислать приглашение заново.');
-      const { data: ok, error } = await sb.rpc('check_invite', { p_code: p.invite });
+      const code = needInviteCode(codeF.input.value);
+      const { lookup } = await codeKeys(code);
+      const { data: ok, error } = await sb.rpc('check_code', { p_lookup: lookup });
       if (error) throw error;
-      if (!ok) throw new Error('Приглашение не найдено, уже использовано или устарело. Попросите новое.');
+      if (!ok) throw new Error('Код не найден, уже использован или устарел. Попросите новый.');
       await signUpOrIn(email.value.trim(), pass.value);
-      await joinWith(link.input.value, nm);
+      await joinByCode(code, nm);
     } else {
       const nm = needName(name);
       await signUpOrIn(email.value.trim(), pass.value);
       await createFamily(nm);
     }
-    incoming = null;
+    doneIncoming();
     await route();
   }); } },
     mode === 'login' ? null : field('Как вас называть', name),
+    mode === 'join' ? codeF.el : null,
     field('Email', email),
-    field('Пароль', pass, mode === 'login' ? null : 'Email нужен только для входа, писем не будет.'),
-    mode === 'join' ? link.el : null,
+    field('Пароль', pass, mode === 'login' ? null : 'Email нужен только для входа, писем не будет. Пароль запомните: он понадобится на новом телефоне.'),
     err, btn);
 
   const tab = (label, m) => h('button', { type: 'button', role: 'tab', 'aria-selected': String(mode === m), class: mode === m ? 'on' : null, onclick: () => showAuth(m) }, label);
@@ -461,7 +586,7 @@ function showAuth(mode) {
       ? h('button', { class: 'btn ghost small', type: 'button', onclick: () => showAuth('login') }, 'Назад ко входу')
       : h('button', { class: 'btn ghost small', type: 'button', onclick: () => showAuth('create') }, 'Создать семью (только при первом запуске)')),
     isIOS && !isStandalone
-      ? h('p', { class: 'note', style: 'margin-top:22px' }, 'Совет: сначала установите приложение — в Safari «Поделиться» → «На экран „Домой“» — и входите уже из него.')
+      ? h('p', { class: 'note', style: 'margin-top:22px' }, 'Совет: сначала установите приложение — в Safari «Поделиться» → «На экран „Домой“» — и входите уже из него. Только так будут приходить уведомления.')
       : null));
 }
 
@@ -469,43 +594,60 @@ function showAuth(mode) {
 function showJoin() {
   const err = h('p', { class: 'form-error', role: 'alert' });
   const name = input({ type: 'text', maxlength: '40', autocomplete: 'nickname', placeholder: 'Например: Мама, Саша, Дед' });
-  const link = linkField('Ссылка-приглашение', incoming && incoming.invite ? incoming.raw : '');
+  const codeF = codeField('Код приглашения', incoming && incoming.code);
   const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Присоединиться');
   const createBtn = h('button', { class: 'btn ghost small', type: 'button' }, 'Создать новую семью');
-  createBtn.addEventListener('click', () => busy(createBtn, err, async () => { await createFamily(needName(name)); incoming = null; await route(); }));
+  createBtn.addEventListener('click', () => busy(createBtn, err, async () => { await createFamily(needName(name)); doneIncoming(); await route(); }));
   mount(page(brand(),
     h('h2', {}, 'Вы ещё не в семье'),
-    h('p', {}, 'Вставьте ссылку-приглашение от администратора семьи.'),
+    h('p', {}, 'Введите код приглашения от администратора семьи.'),
     h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
-      await joinWith(link.input.value, needName(name)); incoming = null; await route();
-    }); } }, field('Как вас называть', name), link.el, err, btn),
+      const nm = needName(name);
+      await joinByCode(needInviteCode(codeF.input.value), nm);
+      doneIncoming();
+      await route();
+    }); } }, field('Как вас называть', name), codeF.el, err, btn),
     h('div', { class: 'alt' }, createBtn, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти'))));
 }
 
-// В семье, но на устройстве нет ключа
+// В семье, но на этом устройстве нет ключа
 function showNeedKey() {
   const err = h('p', { class: 'form-error', role: 'alert' });
-  const link = linkField('Ссылка для нового телефона', '');
+  const codeF = codeField('Код для нового телефона', null, 'Можно вставить и резервный ключ — длинную ссылку.');
   const btn = h('button', { class: 'btn primary', type: 'submit' }, 'Готово');
   mount(page(brand(),
     h('h2', {}, 'Нужен ключ семьи'),
-    h('p', {}, 'На этом устройстве нет ключа, которым зашифрована переписка. Попросите любого из семьи открыть меню ⋯ → «Ссылка для нового телефона» и прислать её вам. Или вставьте свою сохранённую.'),
+    h('p', {}, 'На этом устройстве ещё нет ключа, которым зашифрована переписка. Попросите любого из семьи: меню ⋯ → «Код для нового телефона». Или сделайте код сами на старом телефоне.'),
     h('form', { novalidate: true, onsubmit: (e) => { e.preventDefault(); busy(btn, err, async () => {
-      const p = parseLink(link.input.value);
-      if (!p.key) throw new Error('В этой ссылке нет ключа.');
-      const k = await importKey(p.key);
-      const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(1);
-      if (error) throw error;
-      if (data.length && !(await decryptMsg(data[0], k)).ok) throw new Error('Этот ключ не подходит к переписке вашей семьи.');
-      await setKey(p.key);
+      const text = codeF.input.value;
+      const key = findKey(text);
+      if (key) {
+        const k = await importKey(key);
+        const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(1);
+        if (error) throw error;
+        if (data.length && !(await decryptMsg(data[0], k)).ok) throw new Error('Этот ключ не подходит к переписке вашей семьи.');
+        await setKey(key);
+      } else {
+        const code = findCode(text);
+        if (!code) throw new Error('Введите код из 10 знаков, например ABCDE-FGHJK.');
+        const { lookup, kek } = await codeKeys(code);
+        const { data, error } = await sb.rpc('take_device_code', { p_lookup: lookup });
+        if (error) throw error;
+        await unwrapFamilyKey(kek, data);
+      }
+      doneIncoming();
       await route();
-    }); } }, link.el, err, btn),
+    }); } }, codeF.el, err, btn),
     h('div', { class: 'alt' }, h('button', { class: 'btn ghost small', type: 'button', onclick: logout }, 'Выйти'))));
 }
 
 async function logout() {
   if (!confirm('Выйти из аккаунта на этом устройстве?')) return;
   stopChat();
+  try {
+    const sub = swReg && swReg.pushManager ? await swReg.pushManager.getSubscription() : null;
+    if (sub) { await sb.rpc('delete_push_sub', { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
+  } catch (e) { /* не страшно */ }
   try { await sb.auth.signOut(); } catch (e) { /* всё равно выходим */ }
   me = null; myMember = null;
   route();
@@ -528,14 +670,66 @@ async function route() {
   if (!familyKey) return showNeedKey();
   showChat();
 }
-async function acceptIncoming() {
-  if (incoming && incoming.key) { try { await setKey(incoming.key); } catch (e) { /* неверный ключ — попросим позже */ } }
+async function acceptIncomingKey() {
+  if (incoming && incoming.key) { try { await setKey(incoming.key); } catch (e) { /* попросим позже */ } }
+}
+
+// ───────────── уведомления ─────────────
+function pushState() {
+  if (!('serviceWorker' in navigator)) return 'unsupported';
+  if (isIOS && !isStandalone) return 'install';
+  if (!('PushManager' in window) || !('Notification' in window)) return 'unsupported';
+  return Notification.permission;   // default | granted | denied
+}
+async function getVapid() {
+  const { data, error } = await sb.rpc('get_vapid_public');
+  if (error) throw error;
+  if (data) return data;
+  if (!myMember || !myMember.is_admin) return null;
+  // Администратор при первом запуске создаёт ключи для отправки уведомлений
+  const kp = await crypto.subtle.generateKey({ name: 'ECDSA', namedCurve: 'P-256' }, true, ['sign', 'verify']);
+  const pub = b64e(await crypto.subtle.exportKey('raw', kp.publicKey));
+  const jwk = await crypto.subtle.exportKey('jwk', kp.privateKey);
+  const r = await sb.rpc('set_vapid', { p_public: pub, p_jwk: { kty: jwk.kty, crv: jwk.crv, x: jwk.x, y: jwk.y, d: jwk.d } });
+  if (r.error) throw r.error;
+  return r.data;
+}
+function sameBytes(a, b) { if (!a || !b || a.length !== b.length) return false; for (let i = 0; i < a.length; i++) if (a[i] !== b[i]) return false; return true; }
+async function ensurePushSub() {
+  const reg = swReg || await navigator.serviceWorker.ready;
+  const pub = await getVapid();
+  if (!pub) throw new Error('Уведомления заработают, когда администратор откроет обновлённое приложение');
+  const want = b64d(pub);
+  let sub = await reg.pushManager.getSubscription();
+  const have = sub && sub.options && sub.options.applicationServerKey ? new Uint8Array(sub.options.applicationServerKey) : null;
+  if (sub && have && !sameBytes(have, want)) { await sub.unsubscribe(); sub = null; }
+  if (!sub) sub = await reg.pushManager.subscribe({ userVisibleOnly: true, applicationServerKey: want });
+  const j = sub.toJSON();
+  const { error } = await sb.rpc('save_push_sub', { p_endpoint: j.endpoint, p_p256dh: j.keys.p256dh, p_auth: j.keys.auth });
+  if (error) throw error;
+}
+function enablePushClick() {
+  if (!('Notification' in window)) return toast('Этот браузер не поддерживает уведомления');
+  // Разрешение спрашиваем сразу по нажатию — иначе iPhone откажет
+  Notification.requestPermission().then(async (perm) => {
+    if (perm !== 'granted') { toast('Уведомления не разрешены'); refreshHint(); return; }
+    try { await ensurePushSub(); toast('Уведомления включены'); }
+    catch (e) { toast('Не получилось: ' + errText(e)); }
+    refreshHint();
+  });
+}
+function clearBadge() {
+  try { if (navigator.clearAppBadge) navigator.clearAppBadge().catch(() => {}); } catch (e) { /* нет значка */ }
+  if (swReg && swReg.getNotifications) swReg.getNotifications().then((list) => list.forEach((n) => n.close())).catch(() => {});
 }
 
 // ───────────── чат ─────────────
 function stopChat() {
   if (!chat) return;
+  if (rec) finishRec(false);
+  if (nowPlaying) nowPlaying.pause();
   if (chat.channel) sb.removeChannel(chat.channel);
+  if (chat.io) chat.io.disconnect();
   clearInterval(chat.timer);
   chat = null;
 }
@@ -547,27 +741,74 @@ function showChat() {
   const scroll = h('div', { class: 'scroll' }, older, msgs);
   const ta = h('textarea', { class: 'compose-input', rows: '1', placeholder: 'Сообщение', maxlength: '4000', 'aria-label': 'Сообщение' });
   const send = h('button', { class: 'send', type: 'button', 'aria-label': 'Отправить' }, iconSend());
-  const hint = installHint();
+  const attach = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Отправить фото' }, iconPhoto());
+  const fileInp = h('input', { type: 'file', accept: 'image/*', multiple: true, hidden: true });
+  const compose = h('div', { class: 'compose' }, attach, ta, send);
+  const hintSlot = h('div', {});
   mount(h('div', { class: 'chat' },
     h('header', { class: 'top' }, brandMark(),
       h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, APP_NAME), status),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Меню', onclick: openMenu }, iconMore())),
-    hint, scroll, h('div', { class: 'compose' }, ta, send)));
+    hintSlot, scroll, compose, fileInp));
 
-  chat = { scroll, msgs, older, ta, send, status, hint, rows: new Map(), members: new Map(),
-           minId: Infinity, maxId: 0, stick: true, channel: null, timer: null, sending: false, fetching: false };
+  chat = { scroll, msgs, older, ta, send, attach, compose, status, hintSlot, fileInp,
+           rows: new Map(), members: new Map(), media: new Map(), minId: Infinity, maxId: 0, stick: true,
+           channel: null, timer: null, io: null, sending: false, fetching: false, uploads: 0, online: false };
+  chat.io = new IntersectionObserver((entries) => {
+    for (const en of entries) if (en.isIntersecting && chat) { chat.io.unobserve(en.target); if (en.target.load) en.target.load(); }
+  }, { root: scroll, rootMargin: '600px 0px' });
 
   older.addEventListener('click', loadOlder);
   scroll.addEventListener('scroll', () => { if (chat) chat.stick = nearBottom(); }, { passive: true });
-  ta.addEventListener('input', autosize);
+  ta.addEventListener('input', () => { autosize(); updateAction(); });
   ta.addEventListener('keydown', (e) => {
     if (e.key === 'Enter' && !e.shiftKey && !e.isComposing && (!coarse || e.ctrlKey || e.metaKey)) { e.preventDefault(); doSend(); }
   });
   // чтобы клавиатура не пряталась при нажатии «Отправить»
-  send.addEventListener('pointerdown', (e) => e.preventDefault());
-  send.addEventListener('mousedown', (e) => e.preventDefault());
-  send.addEventListener('click', doSend);
+  send.addEventListener('pointerdown', (e) => { if (send.dataset.mode === 'send') e.preventDefault(); });
+  send.addEventListener('mousedown', (e) => { if (send.dataset.mode === 'send') e.preventDefault(); });
+  send.addEventListener('click', () => { if (send.dataset.mode === 'mic') startRec(); else doSend(); });
+  attach.addEventListener('click', () => { fileInp.value = ''; fileInp.click(); });
+  fileInp.addEventListener('change', async () => {
+    const files = Array.from(fileInp.files || []);
+    for (const f of files) await sendPhoto(f);
+  });
+  updateAction();
+  refreshHint();
+  clearBadge();
   chatInit();
+}
+
+function setStatus() {
+  if (!chat) return;
+  chat.status.textContent = chat.uploads > 0 ? 'Отправка…' : chat.online ? 'Сквозное шифрование' : 'Подключение…';
+}
+
+function refreshHint() {
+  const c = chat;
+  if (!c) return;
+  const st = pushState();
+  let el = null;
+  const hide = (key) => () => { localStorage.setItem(LS_HINT + key, '1'); refreshHint(); };
+  const closeBtn = (key) => h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Скрыть подсказку', onclick: hide(key) }, iconClose());
+  if (st === 'install' && !localStorage.getItem(LS_HINT + 'install')) {
+    el = h('div', { class: 'hint' }, h('p', {}, 'Чтобы приходили уведомления, установите приложение: «Поделиться» → «На экран „Домой“». Потом войдите там и введите код из меню ⋯ → «Код для нового телефона».'),
+      h('div', { class: 'hint-actions' }, closeBtn('install')));
+  } else if (st === 'default' && !localStorage.getItem(LS_HINT + 'push')) {
+    el = h('div', { class: 'hint' }, h('p', {}, 'Включите уведомления, чтобы не пропускать сообщения.'),
+      h('div', { class: 'hint-actions' }, h('button', { class: 'btn small primary', type: 'button', onclick: enablePushClick }, 'Включить'), closeBtn('push')));
+  } else if (!isStandalone && !isIOS && !localStorage.getItem(LS_HINT + 'android')) {
+    el = h('div', { class: 'hint' },
+      h('p', {}, installEvt ? 'Установите приложение на телефон — так удобнее.' : 'Установите приложение: меню браузера ⋮ → «Добавить на главный экран».'),
+      h('div', { class: 'hint-actions' },
+        installEvt ? h('button', { class: 'btn small primary', type: 'button', onclick: async () => {
+          installEvt.prompt();
+          try { await installEvt.userChoice; } catch (e) { /* закрыли окно */ }
+          installEvt = null; refreshHint();
+        } }, 'Установить') : null,
+        closeBtn('android')));
+  }
+  c.hintSlot.replaceChildren(...(el ? [el] : []));
 }
 
 async function chatInit() {
@@ -582,6 +823,9 @@ async function chatInit() {
   scrollBottom();
   subscribe();
   c.timer = setInterval(() => { if (document.visibilityState === 'visible') fetchNewer(); }, 20000);
+  // уведомления: администратор готовит ключи, у остальных обновляется подписка
+  if (myMember.is_admin) getVapid().catch(() => {});
+  if (pushState() === 'granted') ensurePushSub().catch(() => {});
 }
 
 async function loadMembers() {
@@ -600,7 +844,7 @@ async function ingest(rows) {
   const added = [];
   fresh.forEach((r, i) => {
     if (c.rows.has(r.id)) return;
-    c.rows.set(r.id, { id: r.id, sender: r.sender, at: new Date(r.created_at), ok: plain[i].ok, text: plain[i].text });
+    c.rows.set(r.id, { id: r.id, sender: r.sender, at: new Date(r.created_at), ok: plain[i].ok, text: plain[i].text, file: plain[i].file });
     c.minId = Math.min(c.minId, r.id);
     c.maxId = Math.max(c.maxId, r.id);
     if (!c.members.has(r.sender)) unknown = true;
@@ -626,12 +870,219 @@ function linkify(text) {
   return span;
 }
 
+// ───────────── файлы: фото и голосовые ─────────────
+function randomPath() { return b64e(rand(18)); }
+function fileUrl(f) {
+  if (!fileCache.has(f.path)) {
+    fileCache.set(f.path, (async () => {
+      const { data, error } = await sb.storage.from('files').download(f.path);
+      if (error) throw error;
+      const ct = new Uint8Array(await data.arrayBuffer());
+      const pt = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64d(f.iv), additionalData: enc.encode('file:' + f.path) }, familyKey, ct);
+      return URL.createObjectURL(new Blob([pt], { type: f.mime || 'application/octet-stream' }));
+    })().catch((e) => { fileCache.delete(f.path); throw e; }));
+  }
+  return fileCache.get(f.path);
+}
+async function sendFile(kind, blob, mime, meta) {
+  const c = chat;
+  if (!c) return;
+  c.uploads++; setStatus();
+  try {
+    const path = randomPath();
+    const iv = rand(12);
+    const ct = await crypto.subtle.encrypt({ name: 'AES-GCM', iv, additionalData: enc.encode('file:' + path) }, familyKey, await blob.arrayBuffer());
+    const { error } = await sb.storage.from('files').upload(path, new Blob([ct], { type: 'application/octet-stream' }), { contentType: 'application/octet-stream', upsert: false });
+    if (error) throw error;
+    fileCache.set(path, Promise.resolve(URL.createObjectURL(blob)));   // своё видно сразу, без скачивания
+    await postMsg({ v: 1, t: '', f: Object.assign({ kind, path, iv: b64e(iv), mime, size: blob.size }, meta) });
+  } finally {
+    c.uploads--; setStatus();
+  }
+}
+async function compressImage(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = () => reject(new Error('Не удалось открыть фото'));
+      i.src = url;
+    });
+    const max = 1600;
+    const s = Math.min(1, max / Math.max(img.naturalWidth, img.naturalHeight));
+    const w = Math.max(1, Math.round(img.naturalWidth * s)), hh = Math.max(1, Math.round(img.naturalHeight * s));
+    const canvas = document.createElement('canvas');
+    canvas.width = w; canvas.height = hh;
+    canvas.getContext('2d').drawImage(img, 0, 0, w, hh);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    if (!blob) throw new Error('Не удалось сжать фото');
+    return { blob, w, h: hh };
+  } finally { URL.revokeObjectURL(url); }
+}
+async function sendPhoto(file) {
+  try {
+    const { blob, w, h: hh } = await compressImage(file);
+    await sendFile('image', blob, 'image/jpeg', { w, h: hh });
+  } catch (e) { toast('Фото не отправлено: ' + errText(e)); }
+}
+
+function imageWidget(f) {
+  const img = h('img', { class: 'photo', alt: 'Фото', decoding: 'async' });
+  const el = h('button', { class: 'photo-wrap', type: 'button', 'aria-label': 'Открыть фото', style: f.w && f.h ? 'aspect-ratio:' + f.w + ' / ' + f.h : null }, img);
+  el.load = () => fileUrl(f).then((u) => { img.src = u; }).catch(() => { el.classList.add('failed'); img.remove(); });
+  el.addEventListener('click', () => openViewer(f));
+  return el;
+}
+
+function audioWidget(f) {
+  const icon = h('span', { style: 'display:grid' }, iconPlay());
+  const btn = h('button', { class: 'play', type: 'button', 'aria-label': 'Слушать' }, icon);
+  const fill = h('div', { class: 'afill' });
+  const bar = h('div', { class: 'abar' }, fill);
+  const time = h('span', { class: 'adur' }, fmtDur(f.dur));
+  const el = h('div', { class: 'audio' }, btn, bar, time);
+  let audio = null, loading = null;
+  const total = () => (audio && isFinite(audio.duration) && audio.duration > 0 ? audio.duration : (f.dur || 0));
+  const setIcon = (playing) => { icon.replaceChildren(playing ? iconPause() : iconPlay()); btn.setAttribute('aria-label', playing ? 'Пауза' : 'Слушать'); };
+  el.load = () => loading || (loading = fileUrl(f).then((u) => {
+    if (audio) return;
+    audio = new Audio();
+    audio.preload = 'auto';
+    audio.src = u;
+    audio.addEventListener('timeupdate', () => {
+      const t = total();
+      fill.style.width = t ? Math.min(100, (audio.currentTime / t) * 100) + '%' : '0';
+      time.textContent = fmtDur(audio.currentTime);
+    });
+    audio.addEventListener('play', () => setIcon(true));
+    audio.addEventListener('pause', () => setIcon(false));
+    audio.addEventListener('ended', () => { setIcon(false); fill.style.width = '0'; time.textContent = fmtDur(f.dur); });
+  }).catch((e) => { loading = null; throw e; }));
+  btn.addEventListener('click', async () => {
+    if (!audio) {
+      btn.disabled = true;
+      try { await el.load(); } catch (e) { toast('Не удалось загрузить голосовое'); }
+      finally { btn.disabled = false; }
+      if (!audio) return;
+    }
+    if (audio.paused) {
+      if (nowPlaying && nowPlaying !== audio) nowPlaying.pause();
+      nowPlaying = audio;
+      audio.play().catch(() => toast('Нажмите ещё раз, чтобы послушать'));
+    } else audio.pause();
+  });
+  bar.addEventListener('click', (e) => {
+    if (!audio) return;
+    const r = bar.getBoundingClientRect();
+    audio.currentTime = Math.max(0, Math.min(1, (e.clientX - r.left) / r.width)) * total();
+  });
+  return el;
+}
+
+function mediaFor(m) {
+  const c = chat;
+  let el = c.media.get(m.id);
+  if (!el) {
+    el = m.file.kind === 'image' ? imageWidget(m.file) : audioWidget(m.file);
+    c.media.set(m.id, el);
+    c.io.observe(el);
+  }
+  return el;
+}
+
+async function openViewer(f) {
+  let u;
+  try { u = await fileUrl(f); } catch (e) { return toast('Не удалось открыть фото'); }
+  const onKey = (e) => { if (e.key === 'Escape') close(); };
+  const close = () => { v.remove(); document.removeEventListener('keydown', onKey); };
+  const share = navigator.share ? h('button', { class: 'btn small', type: 'button', onclick: async () => {
+    try {
+      const b = await (await fetch(u)).blob();
+      const file = new File([b], 'photo.jpg', { type: b.type || 'image/jpeg' });
+      if (navigator.canShare && !navigator.canShare({ files: [file] })) return toast('Не получается поделиться этим фото');
+      await navigator.share({ files: [file] });
+    } catch (e) { /* закрыли окно */ }
+  } }, 'Сохранить или отправить') : null;
+  const v = h('div', { class: 'viewer', role: 'dialog', 'aria-label': 'Фото' },
+    h('div', { class: 'viewer-bar' }, h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Закрыть', onclick: close }, iconClose()), share),
+    h('img', { src: u, alt: 'Фото' }));
+  document.addEventListener('keydown', onKey);
+  document.body.append(v);
+}
+
+// ───────────── голосовые ─────────────
+function recSupported() { return !!(navigator.mediaDevices && navigator.mediaDevices.getUserMedia && window.MediaRecorder); }
+function pickMime() {
+  for (const t of ['audio/mp4;codecs=mp4a.40.2', 'audio/mp4', 'audio/aac', 'audio/webm;codecs=opus', 'audio/webm']) {
+    try { if (MediaRecorder.isTypeSupported(t)) return t; } catch (e) { /* дальше */ }
+  }
+  return '';
+}
+function updateAction() {
+  const c = chat;
+  if (!c) return;
+  const mic = !c.ta.value.trim() && recSupported();
+  c.send.dataset.mode = mic ? 'mic' : 'send';
+  c.send.replaceChildren(mic ? iconMic() : iconSend());
+  c.send.setAttribute('aria-label', mic ? 'Записать голосовое' : 'Отправить');
+}
+async function startRec() {
+  const c = chat;
+  if (!c || rec) return;
+  let stream;
+  try { stream = await navigator.mediaDevices.getUserMedia({ audio: { echoCancellation: true, noiseSuppression: true } }); }
+  catch (e) { return toast('Нет доступа к микрофону. Разрешите его в настройках телефона.'); }
+  if (chat !== c) { stream.getTracks().forEach((t) => t.stop()); return; }
+  const mime = pickMime();
+  let mr;
+  try { mr = new MediaRecorder(stream, Object.assign({ audioBitsPerSecond: 48000 }, mime ? { mimeType: mime } : {})); }
+  catch (e) {
+    try { mr = new MediaRecorder(stream); }
+    catch (e2) { stream.getTracks().forEach((t) => t.stop()); return toast('На этом телефоне запись голоса не работает'); }
+  }
+  const r = { mr, stream, chunks: [], start: Date.now(), timer: null, label: h('span', {}, '0:00') };
+  mr.ondataavailable = (e) => { if (e.data && e.data.size) r.chunks.push(e.data); };
+  mr.start();
+  rec = r;
+  const cancel = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Удалить запись', onclick: () => finishRec(false) }, iconTrash());
+  const sendRec = h('button', { class: 'send', type: 'button', 'aria-label': 'Отправить голосовое', onclick: () => finishRec(true) }, iconSend());
+  c.compose.replaceChildren(cancel, h('div', { class: 'rec' }, h('span', { class: 'rec-dot' }), r.label, h('span', { class: 'rec-label' }, 'Запись…')), sendRec);
+  r.timer = setInterval(() => {
+    const s = (Date.now() - r.start) / 1000;
+    r.label.textContent = fmtDur(s);
+    if (s >= MAX_REC) finishRec(true);
+  }, 250);
+}
+function finishRec(send) {
+  const r = rec;
+  if (!r) return;
+  rec = null;
+  clearInterval(r.timer);
+  const dur = Math.round((Date.now() - r.start) / 1000);
+  const c = chat;
+  if (c) { c.compose.replaceChildren(c.attach, c.ta, c.send); updateAction(); }
+  r.mr.onstop = async () => {
+    r.stream.getTracks().forEach((t) => t.stop());
+    if (!send || !chat) return;
+    if (dur < 1 || !r.chunks.length) return toast('Слишком короткое голосовое');
+    const type = (r.mr.mimeType || r.chunks[0].type || 'audio/mp4').split(';')[0];
+    try { await sendFile('audio', new Blob(r.chunks, { type }), type, { dur }); }
+    catch (e) { toast('Голосовое не отправлено: ' + errText(e)); }
+  };
+  try { r.mr.stop(); } catch (e) { r.stream.getTracks().forEach((t) => t.stop()); }
+}
+
+// ───────────── сообщения ─────────────
 function msgNode(m, prev) {
   const mine = m.sender === me.id;
   const grouped = !!prev && prev.sender === m.sender && (m.at - prev.at) < 5 * 60 * 1000;
-  const bubble = h('div', { class: 'bubble' + (m.ok ? '' : ' locked') },
-    m.ok ? linkify(m.text) : h('span', { class: 'txt' }, 'Не удалось расшифровать'),
-    h('span', { class: 'time' }, fmtTime(m.at)));
+  const time = h('span', { class: 'time' }, fmtTime(m.at));
+  let bubble;
+  if (!m.ok) bubble = h('div', { class: 'bubble locked' }, h('span', { class: 'txt' }, 'Не удалось расшифровать'), time);
+  else if (m.file && m.file.kind === 'image') bubble = h('div', { class: 'bubble media' }, mediaFor(m), time);
+  else if (m.file) bubble = h('div', { class: 'bubble' }, mediaFor(m), time);
+  else bubble = h('div', { class: 'bubble' }, linkify(m.text), time);
   return h('div', { class: 'msg ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : '') },
     !mine && !grouped ? h('div', { class: 'who' }, memberName(m.sender)) : null, bubble);
 }
@@ -679,8 +1130,9 @@ function subscribe() {
     .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
     .subscribe((st) => {
       if (chat !== c) return;
-      c.status.textContent = st === 'SUBSCRIBED' ? 'Сквозное шифрование' : 'Подключение…';
-      if (st === 'SUBSCRIBED') fetchNewer();
+      c.online = st === 'SUBSCRIBED';
+      setStatus();
+      if (c.online) fetchNewer();
     });
 }
 
@@ -720,6 +1172,14 @@ async function loadOlder() {
   c.scroll.scrollTop = c.scroll.scrollHeight - fromBottom;
 }
 
+async function postMsg(obj) {
+  const c = chat;
+  const { iv, body } = await encryptMsg(obj, me.id);
+  const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body }).select(COLS).single();
+  if (error) throw error;
+  if (chat === c) { c.stick = true; await onIncoming([data]); }
+}
+
 async function doSend() {
   const c = chat;
   if (!c || c.sending) return;
@@ -727,14 +1187,8 @@ async function doSend() {
   if (!text) return;
   c.sending = true; c.send.disabled = true;
   try {
-    const { iv, body } = await encryptMsg(text, me.id);
-    const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body }).select(COLS).single();
-    if (error) throw error;
-    if (chat !== c) return;
-    c.ta.value = '';
-    autosize();
-    c.stick = true;
-    await onIncoming([data]);
+    await postMsg({ v: 1, t: text });
+    if (chat === c) { c.ta.value = ''; autosize(); updateAction(); }
   } catch (e) {
     toast('Не отправлено: ' + errText(e));
   } finally { c.sending = false; c.send.disabled = false; }
@@ -754,46 +1208,76 @@ function sheet(title, ...content) {
   document.body.append(overlay);
   return close;
 }
-function linkBox(link, shareText) {
-  const ta = h('textarea', { class: 'linkbox', readonly: true, rows: '3', 'aria-label': 'Ссылка' });
-  ta.value = link;
-  ta.addEventListener('focus', () => ta.select());
-  const row = h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(link) }, 'Скопировать'));
-  if (navigator.share) {
-    row.append(h('button', { class: 'btn', type: 'button', onclick: () => {
-      navigator.share({ text: shareText ? shareText + '\n' + link : link }).catch(() => {});
-    } }, 'Поделиться'));
-  }
-  return h('div', {}, ta, row);
+function shareRow(text) {
+  const row = h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(text) }, 'Скопировать'));
+  if (navigator.share) row.append(h('button', { class: 'btn', type: 'button', onclick: () => navigator.share({ text }).catch(() => {}) }, 'Поделиться'));
+  return row;
 }
 
 function openMenu() {
   const item = (title, sub, fn, cls) => h('button', { type: 'button', class: cls || null, onclick: () => { close(); fn(); } },
     h('b', {}, title), h('span', {}, sub));
   const close = sheet('Меню', h('div', { class: 'menu' },
-    myMember.is_admin ? item('Пригласить в семью', 'Одноразовая ссылка для одного человека', doInvite) : null,
-    item('Ссылка для нового телефона', 'Чтобы войти с другого устройства', showDeviceLink),
+    myMember.is_admin ? item('Пригласить в семью', 'Код для одного человека', doInvite) : null,
+    item('Код для нового телефона', 'Чтобы войти на другом устройстве', doDeviceCode),
+    item('Уведомления', 'Включить или проверить', showPushSettings),
     item('Участники', 'Кто есть в семейном чате', showMembers),
+    item('Резервный ключ', 'На случай, если потеряются все телефоны', showBackupKey),
     item('Код проверки', 'Убедиться, что у всех один ключ', showFingerprint),
     item('Выйти', 'Из аккаунта на этом устройстве', logout, 'danger')));
 }
 
 async function doInvite() {
-  const { data: code, error } = await sb.rpc('create_invite');
-  if (error) return toast(errText(error));
-  const link = baseUrl() + '#i=' + code + '&k=' + familyKeyB64;
+  let code;
+  try { code = await makeCode('invite'); } catch (e) { return toast(errText(e)); }
+  const text = 'Приглашение в наш семейный чат «' + APP_NAME + '».\nСсылка: ' + baseUrl() + '#c=' + code + '\nКод: ' + fmtCode(code);
   sheet('Приглашение',
-    h('p', {}, 'Отправьте эту ссылку одному человеку. Она сработает один раз и действует 7 дней.'),
-    linkBox(link, 'Приглашение в наш семейный чат «' + APP_NAME + '»:'),
-    h('p', { class: 'note' }, 'В ссылке есть ключ шифрования. Отправляйте её только лично, не в общие группы и не в соцсети.'),
-    h('p', { class: 'note' }, 'Открывать нужно в Safari (iPhone) или Chrome (Android), а не внутри мессенджера.'));
+    h('p', {}, 'Отправьте одному человеку. Код работает один раз и действует 7 дней.'),
+    h('div', { class: 'code' }, fmtCode(code)),
+    shareRow(text),
+    h('p', { class: 'note' }, 'Ключа шифрования в приглашении нет, только код. Если ссылка откроется неправильно, человек просто введёт эти 10 знаков в приложении.'));
 }
 
-function showDeviceLink() {
-  sheet('Ссылка для нового телефона',
-    h('p', {}, 'С этой ссылкой и своим паролем можно войти на другом устройстве и увидеть всю переписку. Её же можно отправить члену семьи, если он сменил телефон.'),
-    linkBox(baseUrl() + '#k=' + familyKeyB64),
-    h('p', { class: 'note' }, 'Сохраните её в надёжном месте, например в заметке под паролем. Это ключ ко всей переписке: никому вне семьи её не давайте.'));
+async function doDeviceCode() {
+  let code;
+  try { code = await makeCode('device'); } catch (e) { return toast(errText(e)); }
+  sheet('Код для нового телефона',
+    h('div', { class: 'code' }, fmtCode(code)),
+    h('p', {}, 'Войдите на новом устройстве со своим email и паролем — приложение попросит этот код. Подойдёт и для члена семьи, если он сменил телефон.'),
+    shareRow('Код для нового телефона в «' + APP_NAME + '»: ' + fmtCode(code)),
+    h('p', { class: 'note' }, 'Код работает один раз и действует сутки.'));
+}
+
+function showBackupKey() {
+  const link = baseUrl() + '#k=' + familyKeyB64;
+  const ta = h('textarea', { class: 'linkbox', readonly: true, rows: '3', 'aria-label': 'Резервный ключ' });
+  ta.value = link;
+  ta.addEventListener('focus', () => ta.select());
+  sheet('Резервный ключ',
+    h('p', {}, 'Сохраните в заметках под паролем. Пригодится, если потеряются все телефоны: войдите с email и паролем и вставьте эту ссылку вместо кода.'),
+    ta,
+    h('div', { class: 'btn-row' }, h('button', { class: 'btn primary', type: 'button', onclick: () => copyText(link) }, 'Скопировать')),
+    h('p', { class: 'note' }, 'Это ключ ко всей переписке. Не отправляйте его в мессенджеры и никому вне семьи.'));
+}
+
+function showPushSettings() {
+  const st = pushState();
+  const parts = [];
+  if (st === 'install') {
+    parts.push(h('p', {}, 'На iPhone уведомления работают только у приложения с экрана «Домой». В Safari: «Поделиться» → «На экран „Домой“». Потом войдите там и введите код из меню ⋯ → «Код для нового телефона».'));
+  } else if (st === 'unsupported') {
+    parts.push(h('p', {}, 'Здесь уведомления не поддерживаются. На iPhone нужна iOS 16.4 или новее и приложение с экрана «Домой».'));
+  } else if (st === 'denied') {
+    parts.push(h('p', {}, 'Уведомления запрещены. Включите их в настройках: на iPhone — Настройки → Уведомления → «' + APP_NAME + '», на Android — значок замка в адресной строке Chrome → Уведомления.'));
+  } else if (st === 'granted') {
+    const btn = h('button', { class: 'btn primary', type: 'button' }, 'Проверить подписку');
+    btn.addEventListener('click', () => busy(btn, null, async () => { await ensurePushSub(); toast('Всё в порядке'); }));
+    parts.push(h('p', {}, 'Уведомления включены. В них видно, кто написал, и сам текст: его расшифровывает ваш телефон.'), btn);
+  } else {
+    parts.push(h('p', {}, 'Включите, чтобы узнавать о новых сообщениях, даже когда приложение закрыто.'),
+      h('button', { class: 'btn primary', type: 'button', onclick: enablePushClick }, 'Включить уведомления'));
+  }
+  sheet('Уведомления', ...parts);
 }
 
 async function showMembers() {
@@ -808,33 +1292,7 @@ async function showMembers() {
 async function showFingerprint() {
   const code = await keyFingerprint();
   sheet('Код проверки', h('div', { class: 'code' }, code),
-    h('p', {}, 'У всех членов семьи этот код должен совпадать. Сверьте его при встрече или по телефону. Если у кого-то он другой — у него неправильная ссылка-ключ.'));
-}
-
-function installHint() {
-  if (isStandalone || localStorage.getItem(LS_HINT)) return null;
-  const text = h('p', {});
-  const actions = h('div', { class: 'hint-actions' });
-  const el = h('div', { class: 'hint' }, text, actions);
-  const hide = () => { localStorage.setItem(LS_HINT, '1'); el.remove(); };
-  el.refresh = () => {
-    actions.replaceChildren();
-    if (installEvt) {
-      text.textContent = 'Установите приложение на телефон — так удобнее.';
-      actions.append(h('button', { class: 'btn small primary', type: 'button', onclick: async () => {
-        installEvt.prompt();
-        try { await installEvt.userChoice; } catch (e) { /* пользователь закрыл окно */ }
-        installEvt = null; hide();
-      } }, 'Установить'));
-    } else if (isIOS) {
-      text.textContent = 'Удобнее с экрана «Домой». Скопируйте «Ссылку для нового телефона» из меню ⋯, потом в Safari «Поделиться» → «На экран „Домой“» и войдите там.';
-    } else {
-      text.textContent = 'Установите приложение: меню браузера ⋮ → «Добавить на главный экран».';
-    }
-    actions.append(h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Скрыть подсказку', onclick: hide }, iconClose()));
-  };
-  el.refresh();
-  return el;
+    h('p', {}, 'У всех членов семьи этот код должен совпадать. Сверьте его при встрече или по телефону. Если у кого-то он другой — у него неправильный ключ.'));
 }
 
 // ───────────── запуск ─────────────
@@ -843,29 +1301,35 @@ if (window.visualViewport) {
   visualViewport.addEventListener('scroll', fitViewport);
 }
 addEventListener('resize', fitViewport);
-addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; if (chat && chat.hint) chat.hint.refresh(); });
-document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') fetchNewer(); });
+addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; refreshHint(); });
+document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') { fetchNewer(); clearBadge(); } });
 addEventListener('online', () => fetchNewer());
 
 (async function start() {
   document.title = APP_NAME;
   fitViewport();
   if (location.hash.length > 1) {
-    const p = parseLink(location.hash);
-    if (p.invite || p.key) incoming = { invite: p.invite, key: p.key, raw: location.href };
-    history.replaceState(null, '', location.pathname + location.search);  // убираем ключ из адресной строки
+    const hash = location.hash;
+    const code = findCode(hash), key = findKey(hash);
+    if (code || key) incoming = { code, key, raw: location.href };
+    else if (isOldInvite(hash)) incoming = { old: true };
+    // Ключ из адресной строки убираем сразу. Код оставляем, пока он не использован,
+    // чтобы ссылка не терялась при переходе из мессенджера в Safari.
+    if (key || !code || isStandalone) history.replaceState(null, '', location.pathname + location.search);
   }
-  if (!SUPABASE_URL || !SUPABASE_KEY) return showConfig();
   if (!window.isSecureContext || !window.crypto || !crypto.subtle) return showFatal('Откройте приложение по адресу, который начинается с https://', { reload: true });
   if (!window.supabase || !window.supabase.createClient) return showFatal('Не загрузилась нужная библиотека. Проверьте интернет и нажмите «Повторить».', { reload: true });
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.register('sw.js').then((r) => { swReg = r; }).catch(() => { /* без уведомлений */ });
+  }
   sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
     auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: false },
   });
   sb.auth.onAuthStateChange((event) => {
     if (event === 'SIGNED_OUT' && chat) setTimeout(() => { stopChat(); route(); }, 0);
   });
-  if (incoming && isIOS && !isStandalone) return showInstall();
-  await acceptIncoming();
+  if (incoming && (incoming.code || incoming.key) && isIOS && !isStandalone) return showInstall();
+  await acceptIncomingKey();
   route();
 })();
 </script>
