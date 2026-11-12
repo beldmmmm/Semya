@@ -39,6 +39,7 @@ async function preview(p) {
     const o = JSON.parse(new TextDecoder().decode(pt));
     if (o.f && o.f.kind === 'image') return '📷 Фото';
     if (o.f && o.f.kind === 'audio') return '🎤 Голосовое сообщение';
+    if (o.f && o.f.kind === 'video') return '🎬 Видео';
     const t = String(o.t || '').trim();
     return t ? (t.length > 180 ? t.slice(0, 179) + '…' : t) : plain;
   } catch (e) { return plain; }
