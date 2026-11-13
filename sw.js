@@ -52,23 +52,28 @@ self.addEventListener('push', (e) => {
   e.waitUntil((async () => {
     let p = {};
     try { p = e.data ? e.data.json() : {}; } catch (err) { p = {}; }
-    const body = await preview(p);
+    const text = await preview(p);
+    const dm = !!p.to;
     try { if (self.navigator.setAppBadge) await self.navigator.setAppBadge(); } catch (err) { /* значок не обязателен */ }
-    await self.registration.showNotification(p.name || 'Семья', {
-      body,
+    await self.registration.showNotification(dm ? (p.name || 'Семья') : 'Семья', {
+      body: dm ? text : (p.name ? p.name + ': ' : '') + text,
       tag: 'semya-' + (p.id || Date.now()),
       icon: 'icon-192.png',
       badge: 'icon-192.png',
-      data: { url: './' },
+      data: { room: dm ? p.sender : 'family' },
     });
   })());
 });
 
+// нажали на уведомление — открыть нужный чат
 self.addEventListener('notificationclick', (e) => {
   e.notification.close();
+  const room = (e.notification.data && e.notification.data.room) || 'family';
   e.waitUntil((async () => {
     const list = await self.clients.matchAll({ type: 'window', includeUncontrolled: true });
-    for (const c of list) { if ('focus' in c) return c.focus(); }
-    return self.clients.openWindow('./');
+    for (const c of list) {
+      if ('focus' in c) { c.postMessage({ type: 'open', room }); return c.focus(); }
+    }
+    return self.clients.openWindow('./#open=' + room);
   })());
 });

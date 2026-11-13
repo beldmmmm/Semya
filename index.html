@@ -219,6 +219,25 @@ p{line-height:1.45;margin:0 0 12px}
 .g-cell{position:relative}
 .g-cell .v-dur{top:auto;bottom:5px;left:5px}
 .g-cell.expired img{opacity:.35;filter:grayscale(1)}
+/* ── список чатов ── */
+.clist{max-width:760px;margin:0 auto}
+.clist-sep{font-size:12.5px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.06em;padding:16px 16px 6px}
+.crow{display:flex;align-items:center;gap:12px;width:100%;text-align:left;border:0;background:transparent;padding:10px 14px;cursor:pointer;border-radius:14px}
+.crow:hover{background:var(--surface-2)}
+.crow-av{position:relative;flex:none;display:grid}
+.crow-av .brand-mark,.crow-av .avatar{width:50px;height:50px;font-size:19px}
+.crow-av.online::after{content:"";position:absolute;right:1px;bottom:1px;width:12px;height:12px;border-radius:50%;background:var(--ok);box-shadow:0 0 0 2px var(--bg)}
+.crow-main{flex:1;min-width:0;display:flex;flex-direction:column;gap:3px}
+.crow-top,.crow-bottom{display:flex;align-items:center;gap:8px;min-width:0}
+.crow-top b{flex:1;min-width:0;font-size:16.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.crow-time{font-size:12.5px;color:var(--muted);flex:none}
+.crow-prev{flex:1;min-width:0;font-size:14.5px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.badge{flex:none;min-width:22px;height:22px;padding:0 7px;border-radius:11px;background:var(--lamp);color:var(--lamp-ink);font-size:12.5px;font-weight:700;display:grid;place-items:center}
+.top .avatar{width:36px;height:36px;font-size:15px}
+.icon-btn.dot{position:relative}
+.icon-btn.dot::after{content:"";position:absolute;top:7px;right:6px;width:9px;height:9px;border-radius:50%;background:var(--lamp)}
+.people li.tap{cursor:pointer}
+.people .btn{margin-left:auto}
 @keyframes spin{to{transform:rotate(360deg)}}
 @keyframes fade{from{opacity:0}}
 @keyframes up{from{transform:translateY(24px)}}
@@ -258,6 +277,10 @@ let familyKey = null, familyKeyB64 = null;
 let incoming = null;      // из ссылки: {code, key, old, raw}
 let chat = null;          // состояние экрана чата
 let installEvt = null, swReg = null, rec = null, nowPlaying = null, accessToken = null;
+const FAMILY = '00000000-0000-0000-0000-000000000000';   // «адрес» общего чата
+// общее для всех экранов: участники, кто в сети, кто что прочитал, живое соединение
+const fam = { members: new Map(), onlineIds: new Set(), reads: new Map(), channel: null, presence: null, online: false, timers: [], started: false };
+let listUi = null, hintSlotEl = null, pendingOpen = null;
 const fileCache = new Map();   // путь → адрес расшифрованного файла
 const blobCache = new Map();   // путь → сам файл (для «Скачать»)
 
@@ -512,7 +535,7 @@ function fitViewport() {
 }
 
 // ───────────── общие экраны ─────────────
-function mount(node) { stopChat(); app.replaceChildren(node); }
+function mount(node) { stopChat(); listUi = null; hintSlotEl = null; app.replaceChildren(node); }
 function page(...children) { return h('div', { class: 'screen' }, h('div', { class: 'wrap' }, ...children)); }
 function brand() {
   return h('div', { class: 'brand' }, brandMark(),
@@ -718,6 +741,7 @@ function showNeedKey() {
 async function logout() {
   if (!confirm('Выйти из аккаунта на этом устройстве?')) return;
   stopChat();
+  stopLive();
   try {
     const sub = swReg && swReg.pushManager ? await swReg.pushManager.getSubscription() : null;
     if (sub) { await sb.rpc('delete_push_sub', { p_endpoint: sub.endpoint }); await sub.unsubscribe(); }
@@ -743,7 +767,15 @@ async function route() {
   myMember = data;
   if (!familyKey) await loadKey();
   if (!familyKey) return showNeedKey();
-  showChat();
+  await startLive();
+  if (pendingOpen) { const peer = pendingOpen; pendingOpen = null; return openRoom(peer); }
+  showList();
+}
+function openRoom(peer) {
+  if (!me || !myMember || !familyKey) { pendingOpen = peer; return; }
+  if (!peer || peer === FAMILY) return showChat(null);
+  if (peer === me.id || !fam.members.has(peer)) return showList();
+  showChat(peer);
 }
 async function acceptIncomingKey() {
   if (incoming && incoming.key) { try { await setKey(incoming.key); } catch (e) { /* попросим позже */ } }
@@ -798,14 +830,86 @@ function clearBadge() {
   if (swReg && swReg.getNotifications) swReg.getNotifications().then((list) => list.forEach((n) => n.close())).catch(() => {});
 }
 
+// ───────────── список чатов ─────────────
+function showList() {
+  const status = h('div', { class: 'top-status' }, 'Подключение…');
+  const rows = h('div', { class: 'clist' }, h('div', { class: 'spinner' }));
+  const hintSlot = h('div', {});
+  mount(h('div', { class: 'chat' },
+    h('header', { class: 'top' }, brandMark(),
+      h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, APP_NAME), status),
+      h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Меню', onclick: openMenu }, iconMore())),
+    hintSlot, h('div', { class: 'scroll' }, rows)));
+  listUi = { rows, status, data: null };
+  hintSlotEl = hintSlot;
+  refreshHint();
+  setStatus();
+  clearBadge();
+  reloadList();
+}
+async function reloadList() {
+  const ui = listUi;
+  if (!ui) return;
+  const { data, error } = await sb.rpc('chat_overview');
+  if (listUi !== ui) return;
+  if (error) { ui.rows.replaceChildren(h('p', { class: 'g-empty' }, errText(error))); return; }
+  const items = await Promise.all((data || []).map(async (r) => {
+    let preview = '';
+    if (r.last_id) { const d = await decryptMsg({ iv: r.last_iv, body: r.last_body, sender: r.last_sender }); preview = snippetOf(d); }
+    return Object.assign({}, r, { preview });
+  }));
+  if (listUi !== ui) return;
+  ui.data = items;
+  renderList();
+  const total = items.reduce((n, r) => n + Number(r.unread || 0), 0);
+  try { if (navigator.setAppBadge) (total ? navigator.setAppBadge(total) : navigator.clearAppBadge()).catch(() => {}); } catch (e) { /* без значка */ }
+}
+function listTime(d) {
+  const y = new Date(); y.setDate(y.getDate() - 1);
+  if (sameDay(d, new Date())) return fmtTime(d);
+  if (sameDay(d, y)) return 'вчера';
+  return d.toLocaleDateString('ru-RU', { day: 'numeric', month: 'short' });
+}
+function renderList() {
+  const ui = listUi;
+  if (!ui || !ui.data) return;
+  const famRow = ui.data.find((r) => r.peer === FAMILY);
+  const dms = ui.data.filter((r) => r.peer !== FAMILY && fam.members.has(r.peer))
+    .sort((a, b) => Number(b.last_id || 0) - Number(a.last_id || 0) || memberName(a.peer).localeCompare(memberName(b.peer), 'ru'));
+  const row = (r, isFamily) => {
+    const name = isFamily ? APP_NAME : memberName(r.peer);
+    const who = r.last_id ? (r.last_sender === me.id ? 'Вы: ' : isFamily ? memberName(r.last_sender) + ': ' : '') : '';
+    const preview = r.last_id ? who + r.preview : isFamily ? 'Общий чат всей семьи' : 'Напишите лично — увидите только вы двое';
+    const online = !isFamily && fam.onlineIds.has(r.peer);
+    return h('button', { class: 'crow', type: 'button', onclick: () => openRoom(isFamily ? null : r.peer) },
+      h('span', { class: 'crow-av' + (online ? ' online' : '') },
+        isFamily ? brandMark() : h('span', { class: 'avatar', style: 'background:' + avatarColor(name) }, initials(name))),
+      h('span', { class: 'crow-main' },
+        h('span', { class: 'crow-top' }, h('b', {}, name), r.last_at ? h('span', { class: 'crow-time' }, listTime(new Date(r.last_at))) : null),
+        h('span', { class: 'crow-bottom' }, h('span', { class: 'crow-prev' }, preview),
+          Number(r.unread) > 0 ? h('span', { class: 'badge' }, String(r.unread)) : null)));
+  };
+  ui.rows.replaceChildren(...[
+    famRow ? row(famRow, true) : null,
+    dms.length ? h('div', { class: 'clist-sep' }, 'Личные') : null,
+    ...dms.map((r) => row(r, false)),
+    !dms.length ? h('p', { class: 'note', style: 'padding:14px 16px' }, myMember.is_admin ? 'Пригласите родных: меню ⋯ → «Пригласить в семью». Потом здесь появятся личные чаты с каждым.' : 'Здесь появятся личные чаты с каждым из семьи.') : null,
+  ].filter(Boolean));
+}
+async function flushRead() {
+  const c = chat;
+  if (!c || document.visibilityState !== 'visible' || !(c.maxId > c.readSent)) return;
+  clearTimeout(c.readTimer);
+  const peer = c.peer || FAMILY;
+  const { error } = await sb.rpc('mark_read2', { p_peer: peer, p_id: c.maxId });
+  if (!error) c.readSent = c.maxId;
+}
+
 // ───────────── чат ─────────────
 function stopChat() {
   if (!chat) return;
   if (rec) finishRec(false);
   if (nowPlaying) nowPlaying.pause();
-  if (chat.channel) sb.removeChannel(chat.channel);
-  if (chat.presence) sb.removeChannel(chat.presence);
-  clearInterval(chat.seenTimer);
   clearTimeout(chat.readTimer);
   if (chat.io) chat.io.disconnect();
   clearInterval(chat.timer);
@@ -813,12 +917,16 @@ function stopChat() {
   chat = null;
 }
 
-function showChat() {
+function showChat(peer) {
+  peer = peer && peer !== FAMILY ? peer : null;
+  const pm = peer ? fam.members.get(peer) : null;
+  const title = peer ? (pm ? pm.name : 'Участник') : APP_NAME;
   const status = h('div', { class: 'top-status' }, 'Подключение…');
+  const backBtn = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Все чаты', onclick: async () => { await flushRead(); showList(); } }, iconBack());
   const older = h('button', { class: 'btn ghost small older', type: 'button', hidden: true }, 'Показать более ранние');
   const msgs = h('div', { class: 'msgs' });
   const scroll = h('div', { class: 'scroll' }, older, msgs);
-  const ta = h('textarea', { class: 'compose-input', rows: '1', placeholder: 'Сообщение', maxlength: '4000', 'aria-label': 'Сообщение' });
+  const ta = h('textarea', { class: 'compose-input', rows: '1', placeholder: peer ? 'Личное сообщение' : 'Сообщение', maxlength: '4000', 'aria-label': 'Сообщение' });
   const send = h('button', { class: 'send', type: 'button', 'aria-label': 'Отправить' }, iconSend());
   const attach = h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Отправить фото или видео' }, iconClip());
   const fileInp = h('input', { type: 'file', accept: 'image/*,video/*', multiple: true, hidden: true });
@@ -826,17 +934,19 @@ function showChat() {
   const compose = h('div', { class: 'compose' }, attach, ta, send);
   const hintSlot = h('div', {});
   mount(h('div', { class: 'chat' },
-    h('header', { class: 'top' }, brandMark(),
-      h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, APP_NAME), status),
+    h('header', { class: 'top' }, backBtn,
+      peer ? h('span', { class: 'avatar', style: 'background:' + avatarColor(title) }, initials(title)) : brandMark(),
+      h('div', { class: 'top-text' }, h('div', { class: 'top-title' }, title), status),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Медиатека', onclick: openGallery }, iconGrid()),
       h('button', { class: 'icon-btn', type: 'button', 'aria-label': 'Меню', onclick: openMenu }, iconMore())),
     hintSlot, scroll, bar, compose, fileInp));
 
-  chat = { scroll, msgs, older, ta, send, attach, compose, bar, status, hintSlot, fileInp,
-           rows: new Map(), members: new Map(), media: new Map(), minId: Infinity, maxId: 0, stick: true,
-           channel: null, timer: null, io: null, sending: false, fetching: false, uploads: 0, online: false,
+  hintSlotEl = hintSlot;
+  chat = { peer, backBtn, scroll, msgs, older, ta, send, attach, compose, bar, status, fileInp,
+           rows: new Map(), media: new Map(), minId: Infinity, maxId: 0, stick: true,
+           io: null, sending: false, fetching: false, uploads: 0,
            replyTo: null, editing: null, lastActions: 0,
-           reacts: new Map(), onlineIds: new Set(), presence: null, progress: null, readSent: 0, readTimer: null, seenTimer: null };
+           reacts: new Map(), progress: null, readSent: 0, readTimer: null };
   chat.io = new IntersectionObserver((entries) => {
     for (const en of entries) if (en.isIntersecting && chat) { chat.io.unobserve(en.target); if (en.target.load) en.target.load(); }
   }, { root: scroll, rootMargin: '600px 0px' });
@@ -913,22 +1023,26 @@ function showChat() {
 
 function setStatus() {
   const c = chat;
-  if (!c) return;
+  const el = c ? c.status : listUi ? listUi.status : null;
+  if (!el) return;
   let t, live = false;
-  if (c.uploads > 0) t = c.progress != null ? 'Отправка… ' + Math.round(c.progress * 100) + '%' : 'Отправка…';
-  else if (!c.online) t = 'Подключение…';
-  else {
-    const names = [...c.onlineIds].map((id) => (c.members.get(id) || {}).name).filter(Boolean);
+  if (c && c.uploads > 0) t = c.progress != null ? 'Отправка… ' + Math.round(c.progress * 100) + '%' : 'Отправка…';
+  else if (!fam.online) t = 'Подключение…';
+  else if (c && c.peer) {
+    if (fam.onlineIds.has(c.peer)) { t = 'в сети'; live = true; }
+    else { const m = fam.members.get(c.peer); t = (m && seenLabel(m)) || 'личная переписка'; }
+  } else {
+    const names = [...fam.onlineIds].map((id) => (fam.members.get(id) || {}).name).filter(Boolean);
     if (names.length) { t = 'в сети: ' + names.join(', '); live = true; }
     else t = 'Сквозное шифрование';
   }
-  c.status.textContent = t;
-  c.status.classList.toggle('live', live);
+  el.textContent = t;
+  el.classList.toggle('live', live);
 }
 
 function refreshHint() {
-  const c = chat;
-  if (!c) return;
+  const slot = hintSlotEl;
+  if (!slot) return;
   const st = pushState();
   let el = null;
   const hide = (key) => () => { localStorage.setItem(LS_HINT + key, '1'); refreshHint(); };
@@ -950,13 +1064,12 @@ function refreshHint() {
         } }, 'Установить') : null,
         closeBtn('android')));
   }
-  c.hintSlot.replaceChildren(...(el ? [el] : []));
+  slot.replaceChildren(...(el ? [el] : []));
 }
 
 async function chatInit() {
   const c = chat;
-  await loadMembers();
-  const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(PAGE);
+  const { data, error } = await roomFilter(sb.from('messages').select(COLS), c.peer).order('id', { ascending: false }).limit(PAGE);
   if (chat !== c) return;
   if (error) toast(errText(error));
   else { c.older.hidden = data.length < PAGE; await ingest(data); }
@@ -965,22 +1078,78 @@ async function chatInit() {
   if (chat !== c) return;
   renderAll();
   scrollBottom();
-  subscribe();
-  joinPresence();
+  setStatus();
   markRead();
+}
+
+// сообщения только этого чата: общего (кому = пусто) или личного между двумя
+function roomFilter(q, peer) {
+  return peer
+    ? q.or('and(sender.eq.' + me.id + ',to_user.eq.' + peer + '),and(sender.eq.' + peer + ',to_user.eq.' + me.id + ')')
+    : q.is('to_user', null);
+}
+const inRoomRow = (r, c) => (c.peer ? (r.sender === me.id && r.to_user === c.peer) || (r.sender === c.peer && r.to_user === me.id) : !r.to_user);
+
+async function loadMembers() {
+  let { data, error } = await sb.from('members').select('user_id,name,is_admin,joined_at,last_read_id,last_seen').order('joined_at');
+  if (error) ({ data, error } = await sb.from('members').select('user_id,name,is_admin,joined_at').order('joined_at'));
+  if (!error) fam.members = new Map(data.map((m) => [m.user_id, m]));
+}
+async function loadReads() {
+  const { data, error } = await sb.from('reads').select('user_id,peer,last_id');
+  if (!error) fam.reads = new Map(data.map((r) => [r.user_id + '|' + r.peer, Number(r.last_id)]));
+}
+const readPtr = (uid, peer) => Number(fam.reads.get(uid + '|' + peer) || 0);
+
+// ───────────── живое соединение (одно на всё приложение) ─────────────
+async function startLive() {
+  if (fam.started) return;
+  fam.started = true;
+  await Promise.all([loadMembers(), loadReads()]);
+  fam.channel = sb.channel('family-messages')
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (p) => onLiveMessage(p.new, true))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (p) => onLiveMessage(p.new, false))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (p) => onReaction(p.eventType, p.eventType === 'DELETE' ? p.old : p.new))
+    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members' }, (p) => onMemberUpdate(p.new))
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'reads' }, (p) => onReadUpdate(p.new))
+    .subscribe((st) => {
+      fam.online = st === 'SUBSCRIBED';
+      setStatus();
+      if (fam.online) { if (chat) resync(); else if (listUi) reloadList(); }
+    });
+  joinPresence();
   touchSeen();
-  c.timer = setInterval(() => { if (document.visibilityState === 'visible') fetchNewer(); }, 20000);
-  c.seenTimer = setInterval(() => { if (document.visibilityState === 'visible') touchSeen(); }, 120000);
+  fam.timers.push(setInterval(() => {
+    if (document.visibilityState !== 'visible') return;
+    if (chat) fetchNewer(); else if (listUi) reloadList();
+  }, 20000));
+  fam.timers.push(setInterval(() => { if (document.visibilityState === 'visible') touchSeen(); }, 120000));
   // уведомления: администратор готовит ключи, у остальных обновляется подписка
   if (myMember.is_admin) getVapid().catch(() => {});
   if (pushState() === 'granted') ensurePushSub().catch(() => {});
 }
-
-async function loadMembers() {
-  const c = chat;
-  let { data, error } = await sb.from('members').select('user_id,name,is_admin,joined_at,last_read_id,last_seen').order('joined_at');
-  if (error) ({ data, error } = await sb.from('members').select('user_id,name,is_admin,joined_at').order('joined_at'));
-  if (!error && c && chat === c) c.members = new Map(data.map((m) => [m.user_id, m]));
+function stopLive() {
+  if (fam.channel) sb.removeChannel(fam.channel);
+  if (fam.presence) sb.removeChannel(fam.presence);
+  fam.timers.forEach(clearInterval);
+  Object.assign(fam, { members: new Map(), onlineIds: new Set(), reads: new Map(), channel: null, presence: null, online: false, timers: [], started: false });
+}
+let listReloadTimer = null;
+function scheduleListReload() { clearTimeout(listReloadTimer); listReloadTimer = setTimeout(() => reloadList(), 400); }
+function onLiveMessage(row, isNew) {
+  if (!row) return;
+  if (chat && inRoomRow(row, chat)) onIncoming([row]);
+  else if (isNew && row.sender !== me.id && chat) {
+    chat.backBtn.classList.add('dot');
+    toast(row.to_user ? 'Личное сообщение: ' + memberName(row.sender) : 'Новое в чате «' + APP_NAME + '»: ' + memberName(row.sender));
+  }
+  if (listUi) scheduleListReload();
+}
+function onReadUpdate(row) {
+  if (!row || !row.user_id) return;
+  fam.reads.set(row.user_id + '|' + row.peer, Number(row.last_id));
+  if (chat) renderAll();
+  if (listUi && row.user_id === me.id) scheduleListReload();
 }
 
 async function ingest(rows) {
@@ -999,13 +1168,13 @@ async function ingest(rows) {
                        edited: !!r.edited_at, ok: p.ok, text: p.text, file: p.file, reply: p.reply });
     if (old) { res.changed.push(r.id); c.media.delete(r.id); }
     else { res.added.push(r.id); c.minId = Math.min(c.minId, r.id); c.maxId = Math.max(c.maxId, r.id); }
-    if (!c.members.has(r.sender)) unknown = true;
+    if (!fam.members.has(r.sender)) unknown = true;
   });
   if (unknown) await loadMembers();
   return res;
 }
 
-function memberName(id) { const m = chat && chat.members.get(id); return m ? m.name : 'Участник'; }
+function memberName(id) { const m = fam.members.get(id); return m ? m.name : 'Участник'; }
 
 function linkify(text) {
   const span = h('span', { class: 'txt' });
@@ -1385,6 +1554,7 @@ function monthLabel(d) {
 }
 function openGallery() {
   if (!chat) return;
+  const room = chat.peer;
   const g = { tab: 'image', rows: [], done: false, loading: false, token: 0, cells: new Map() };
   const tabs = h('div', { class: 'seg seg3', role: 'tablist' });
   const body = h('div', {});
@@ -1457,7 +1627,7 @@ function openGallery() {
     if (!g.rows.length) render();
     try {
       const from = g.rows.length;
-      const { data, error } = await sb.from('messages').select(COLS).eq('kind', g.tab).eq('deleted', false)
+      const { data, error } = await roomFilter(sb.from('messages').select(COLS), room).eq('kind', g.tab).eq('deleted', false)
         .order('id', { ascending: false }).range(from, from + 89);
       if (token !== g.token) return;
       if (error) throw error;
@@ -1566,10 +1736,14 @@ function msgNode(m, prev) {
   else if (m.file) bubble = h('div', { class: 'bubble' }, mediaFor(m), time);
   else bubble = h('div', { class: 'bubble' }, m.reply ? quoteNode(m.reply) : null, linkify(m.text), time);
   return h('div', { class: 'msg ' + (mine ? 'mine' : 'theirs') + (grouped ? ' grouped' : ''), 'data-id': String(m.id) },
-    !mine && !grouped ? h('div', { class: 'who' }, memberName(m.sender)) : null, bubble, reactsNode(m));
+    !mine && !grouped && !chat.peer ? h('div', { class: 'who' }, memberName(m.sender)) : null, bubble, reactsNode(m));
 }
 function readers(m) {
-  return [...chat.members.values()].filter((x) => x.user_id !== m.sender && Number(x.last_read_id || 0) >= m.id);
+  if (chat && chat.peer) {
+    const p = fam.members.get(chat.peer);
+    return p && readPtr(chat.peer, me.id) >= m.id ? [p] : [];
+  }
+  return [...fam.members.values()].filter((x) => x.user_id !== m.sender && Math.max(readPtr(x.user_id, FAMILY), Number(x.last_read_id || 0)) >= m.id);
 }
 function ticksNode(m) {
   const read = readers(m).length > 0;
@@ -1589,7 +1763,11 @@ function reactsNode(m) {
 }
 
 function emptyState() {
-  const alone = chat.members.size <= 1 && myMember.is_admin;
+  if (chat.peer) {
+    return h('div', { class: 'empty' }, h('p', {}, 'Личная переписка'),
+      h('p', {}, 'Её видите только вы и ' + memberName(chat.peer) + '. Сообщения зашифрованы, сервер их не читает.'));
+  }
+  const alone = fam.members.size <= 1 && myMember.is_admin;
   return h('div', { class: 'empty' },
     h('p', {}, 'Здесь пока тихо'),
     h('p', {}, alone
@@ -1625,21 +1803,6 @@ function autosize() {
   ta.style.height = Math.min(ta.scrollHeight + 2, 140) + 'px';
 }
 
-function subscribe() {
-  const c = chat;
-  c.channel = sb.channel('family-messages')
-    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'messages' }, (payload) => onIncoming([payload.new]))
-    .on('postgres_changes', { event: '*', schema: 'public', table: 'reactions' }, (payload) => onReaction(payload.eventType, payload.eventType === 'DELETE' ? payload.old : payload.new))
-    .on('postgres_changes', { event: 'UPDATE', schema: 'public', table: 'members' }, (payload) => onMemberUpdate(payload.new))
-    .subscribe((st) => {
-      if (chat !== c) return;
-      c.online = st === 'SUBSCRIBED';
-      setStatus();
-      if (c.online) resync();
-    });
-}
-
 async function onIncoming(rows) {
   const c = chat;
   if (!c) return;
@@ -1655,17 +1818,17 @@ async function onIncoming(rows) {
 async function resync() {
   const c = chat;
   if (!c) return;
-  const { data, error } = await sb.from('messages').select(COLS).order('id', { ascending: false }).limit(PAGE);
+  const { data, error } = await roomFilter(sb.from('messages').select(COLS), c.peer).order('id', { ascending: false }).limit(PAGE);
   if (error || chat !== c) return;
   await onIncoming(data);
-  await loadMembers();
+  await Promise.all([loadMembers(), loadReads()]);
   await loadReactions(c.minId);
   if (chat !== c) return;
   renderAll();
   setStatus();
   if (c.stick) scrollBottom();
   markRead();
-  if (c.presence) c.presence.track({ at: Date.now() }).catch(() => {});
+  if (fam.presence) fam.presence.track({ at: Date.now() }).catch(() => {});
 }
 
 async function jumpTo(id) {
@@ -1685,7 +1848,7 @@ async function fetchNewer() {
   if (!c || c.fetching) return;
   c.fetching = true;
   try {
-    const { data, error } = await sb.from('messages').select(COLS).gt('id', c.maxId).order('id', { ascending: true }).limit(500);
+    const { data, error } = await roomFilter(sb.from('messages').select(COLS), c.peer).gt('id', c.maxId).order('id', { ascending: true }).limit(500);
     if (!error && data.length) await onIncoming(data);
   } finally { c.fetching = false; }
 }
@@ -1694,7 +1857,7 @@ async function loadOlder() {
   const c = chat;
   if (!c || !isFinite(c.minId)) return;
   c.older.disabled = true;
-  const { data, error } = await sb.from('messages').select(COLS).lt('id', c.minId).order('id', { ascending: false }).limit(PAGE);
+  const { data, error } = await roomFilter(sb.from('messages').select(COLS), c.peer).lt('id', c.minId).order('id', { ascending: false }).limit(PAGE);
   if (chat !== c) return;
   c.older.disabled = false;
   if (error) return toast(errText(error));
@@ -1710,7 +1873,9 @@ async function loadOlder() {
 async function postMsg(obj, kind) {
   const c = chat;
   const { iv, body } = await encryptMsg(obj, me.id);
-  const { data, error } = await sb.from('messages').insert({ sender: me.id, iv, body, kind: kind || 'text' }).select(COLS).single();
+  const row = { sender: me.id, iv, body, kind: kind || 'text' };
+  if (c && c.peer) row.to_user = c.peer;
+  const { data, error } = await sb.from('messages').insert(row).select(COLS).single();
   if (error) throw error;
   if (chat === c) { c.stick = true; await onIncoming([data]); }
 }
@@ -1816,6 +1981,7 @@ function openMsgActions(id) {
     ...info,
     h('div', { class: 'menu' },
       m.ok ? item('Ответить', () => startReply(m)) : null,
+      !mine && !c.peer ? item('Написать лично', () => openRoom(m.sender)) : null,
       m.ok && !m.file && m.text ? item('Копировать', () => copyText(m.text)) : null,
       m.ok && m.file && m.file.kind === 'image' ? item('Открыть фото', () => { const items = chatImages(); openViewer(items, items.findIndex((x) => x.id === m.id)); }) : null,
       m.ok && m.file && m.file.kind === 'video' && !isExpired(m.file) ? item('Смотреть и скачать', () => openVideo(m.file)) : null,
@@ -1857,6 +2023,7 @@ async function loadReactions(fromId, toId) {
 async function onReaction(type, row) {
   const c = chat;
   if (!c || !row || row.message_id == null) return;
+  if (type !== 'DELETE' && !c.rows.has(row.message_id)) return;
   if (type === 'DELETE') setReact(row.message_id, row.user_id, null);
   else {
     const e = await decReact(row);
@@ -1889,18 +2056,17 @@ async function toggleReaction(mid, emoji) {
 
 // ───────────── кто в сети и кто прочитал ─────────────
 async function joinPresence() {
-  const c = chat;
   try { await sb.realtime.setAuth(); } catch (e) { /* возьмёт токен сам */ }
-  if (chat !== c) return;
+  if (!fam.started) return;
   const ch = sb.channel('family', { config: { private: true, presence: { key: me.id } } });
   ch.on('presence', { event: 'sync' }, () => {
-    if (chat !== c) return;
-    c.onlineIds = new Set(Object.keys(ch.presenceState()).filter((k) => k !== me.id));
+    fam.onlineIds = new Set(Object.keys(ch.presenceState()).filter((k) => k !== me.id));
     setStatus();
+    if (listUi) renderList();
   }).subscribe((st) => {
     if (st === 'SUBSCRIBED') ch.track({ at: Date.now() }).catch(() => {});
   });
-  c.presence = ch;
+  fam.presence = ch;
 }
 function markRead() {
   const c = chat;
@@ -1908,30 +2074,29 @@ function markRead() {
   clearTimeout(c.readTimer);
   c.readTimer = setTimeout(async () => {
     if (chat !== c) return;
-    const id = c.maxId;
-    const { error } = await sb.rpc('mark_read', { p_id: id });
-    if (!error) c.readSent = Math.max(c.readSent, id);
+    const id = c.maxId, peer = c.peer || FAMILY;
+    const { error } = await sb.rpc('mark_read2', { p_peer: peer, p_id: id });
+    if (!error) { c.readSent = Math.max(c.readSent, id); fam.reads.set(me.id + '|' + peer, Math.max(readPtr(me.id, peer), id)); }
   }, 700);
 }
-function touchSeen() { if (chat) sb.rpc('touch_seen').then(() => {}, () => {}); }
+function touchSeen() { if (me && fam.started) sb.rpc('touch_seen').then(() => {}, () => {}); }
 function touchSeenOnLeave() {
-  if (!chat || !accessToken) return;
+  if (!fam.started || !accessToken) return;
   try {
     fetch(SUPABASE_URL + '/rest/v1/rpc/touch_seen', { method: 'POST', keepalive: true, body: '{}',
       headers: { apikey: SUPABASE_KEY, Authorization: 'Bearer ' + accessToken, 'Content-Type': 'application/json' } }).catch(() => {});
   } catch (e) { /* не страшно */ }
 }
 function onMemberUpdate(row) {
-  const c = chat;
-  if (!c || !row || !row.user_id) return;
-  const old = c.members.get(row.user_id) || {};
-  c.members.set(row.user_id, Object.assign({}, old, row));
-  if (Number(old.last_read_id || 0) !== Number(row.last_read_id || 0)) renderAll();
+  if (!row || !row.user_id) return;
+  const old = fam.members.get(row.user_id) || {};
+  fam.members.set(row.user_id, Object.assign({}, old, row));
+  if (chat && Number(old.last_read_id || 0) !== Number(row.last_read_id || 0)) renderAll();
   setStatus();
 }
 function seenLabel(m) {
   if (m.user_id === me.id) return 'это вы';
-  if (chat && chat.onlineIds.has(m.user_id)) return 'в сети';
+  if (fam.onlineIds.has(m.user_id)) return 'в сети';
   if (!m.last_seen) return '';
   const d = new Date(m.last_seen), y = new Date();
   y.setDate(y.getDate() - 1);
@@ -1964,10 +2129,9 @@ function openMenu() {
     h('b', {}, title), h('span', {}, sub));
   const close = sheet('Меню', h('div', { class: 'menu' },
     myMember.is_admin ? item('Пригласить в семью', 'Код для одного человека', doInvite) : null,
-    item('Медиатека', 'Все фото и голосовые по датам', openGallery),
     item('Код для нового телефона', 'Чтобы войти на другом устройстве', doDeviceCode),
     item('Уведомления', 'Включить или проверить', showPushSettings),
-    item('Участники', 'Кто есть в семейном чате', showMembers),
+    item('Участники', 'Кто в семье, написать лично', showMembers),
     item('Резервный ключ', 'На случай, если потеряются все телефоны', showBackupKey),
     item('Код проверки', 'Убедиться, что у всех один ключ', showFingerprint),
     item('Выйти', 'Из аккаунта на этом устройстве', logout, 'danger')));
@@ -2028,11 +2192,15 @@ function showPushSettings() {
 
 async function showMembers() {
   await loadMembers();
-  const list = chat ? [...chat.members.values()] : [];
-  sheet('Участники', h('ul', { class: 'people' }, list.map((m) => h('li', {},
-    h('span', { class: 'avatar', style: 'background:' + avatarColor(m.name) }, initials(m.name)),
-    h('div', {}, h('div', {}, m.name + (m.user_id === me.id ? ' (вы)' : '')),
-      h('div', { class: 'tag' }, [seenLabel(m), m.is_admin ? 'администратор' : ''].filter(Boolean).join(', ')))))));
+  const list = [...fam.members.values()];
+  const close = sheet('Участники', h('ul', { class: 'people' }, list.map((m) => {
+    const isMe = m.user_id === me.id;
+    return h('li', { class: isMe ? null : 'tap', onclick: isMe ? null : () => { close(); openRoom(m.user_id); } },
+      h('span', { class: 'avatar', style: 'background:' + avatarColor(m.name) }, initials(m.name)),
+      h('div', {}, h('div', {}, m.name + (isMe ? ' (вы)' : '')),
+        h('div', { class: 'tag' }, [seenLabel(m), m.is_admin ? 'администратор' : ''].filter(Boolean).join(', '))),
+      isMe ? null : h('span', { class: 'btn small' }, 'Написать'));
+  })));
 }
 
 async function showFingerprint() {
@@ -2049,7 +2217,11 @@ if (window.visualViewport) {
 addEventListener('resize', fitViewport);
 addEventListener('beforeinstallprompt', (e) => { e.preventDefault(); installEvt = e; refreshHint(); });
 document.addEventListener('visibilitychange', () => {
-  if (document.visibilityState === 'visible') { resync(); clearBadge(); }
+  if (document.visibilityState === 'visible') {
+    if (chat) resync(); else if (listUi) reloadList();
+    if (fam.presence) fam.presence.track({ at: Date.now() }).catch(() => {});
+    if (chat) clearBadge();
+  }
   else touchSeenOnLeave();
 });
 addEventListener('online', () => fetchNewer());
@@ -2057,6 +2229,13 @@ addEventListener('online', () => fetchNewer());
 (async function start() {
   document.title = APP_NAME;
   fitViewport();
+  const openMatch = location.hash.match(/[#&]open=(family|[0-9a-f-]{36})/);
+  if (openMatch) { pendingOpen = openMatch[1] === 'family' ? FAMILY : openMatch[1]; history.replaceState(null, '', location.pathname + location.search); }
+  if ('serviceWorker' in navigator) {
+    navigator.serviceWorker.addEventListener('message', (e) => {
+      if (e.data && e.data.type === 'open') openRoom(e.data.room === 'family' ? FAMILY : e.data.room);
+    });
+  }
   if (location.hash.length > 1) {
     const hash = location.hash;
     const code = findCode(hash), key = findKey(hash);
